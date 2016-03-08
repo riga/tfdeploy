@@ -39,6 +39,7 @@ class Model(object):
 
         self.root = set()
 
+        # load when desired
         if path is not None:
             self.load(path)
 
@@ -49,9 +50,12 @@ class Model(object):
         """
         if isinstance(name, Tensor):
             name = name.name
+
+        # append the default value_index if there's none
         if not self.value_index_cre.search(name):
             name += ":%d" % self.default_value_index
 
+        # return the first occurance of a tensor with that name
         return reduce(lambda t1,t2: t1 or t2.get(name), self.root, None)
 
     def __getitem__(self, name):
@@ -92,12 +96,14 @@ class Model(object):
 
 class TensorRegister(type):
     """
-    TODO.
+    Meta class of :py:class:`Tensor` that performs instance caching indexed by tensorflow tensor
+    instances.
     """
 
     instances = {}
 
     def __call__(cls, sess, tftensor):
+        # simply caching
         if tftensor not in cls.instances:
             cls.instances[tftensor] = super(TensorRegister, cls).__call__(sess, tftensor)
         return cls.instances[tftensor]
@@ -116,13 +122,13 @@ class Tensor(object):
         if not sess:
             raise ValueError("bad tensorflow session: %s" % sess)
 
-        self.name = None
+        self.name = tftensor.name
         self.op = None
         self.value = None
         self.last_uuid = None
 
-        self.name = tftensor.name
-
+        # no op for variables and placeholders
+        # explicit value for variables
         if tftensor.op.type == "Variable":
             self.value = tftensor.eval(session=sess)
         elif tftensor.op.type != "Placeholder":
@@ -131,8 +137,7 @@ class Tensor(object):
     def get(self, name):
         """
         Returns a tensor given by *name* using a deep lookup within the inputs of the op. Note that
-        *this* tensor is returned when *name* is correct. *None* is returned when no tensor was
-        found.
+        *this* tensor is returned when *name* matches. *None* is returned when no tensor was found.
         """
         if self.name == name:
             return self
@@ -147,9 +152,11 @@ class Tensor(object):
         You can overwrite values of dependent tensors using *feed_dict*, a mapping of tensors to
         numpy arrays, which is passed down the evaluation chain.
         """
+        # set a cache uuid for this eval call
         if _uuid is None:
             _uuid = uuid4()
 
+        # already cached? this is important for tensors that are used multiple time within the graph
         if _uuid == self.last_uuid:
             return self.value
         else:
@@ -158,6 +165,8 @@ class Tensor(object):
         if feed_dict is None:
             feed_dict = {}
 
+        # when _this_ tensor is in the feed_dict, return the fed value
+        # otherwise, eval the op
         if self in feed_dict:
             self.value = feed_dict[self]
         elif self.op is not None:
@@ -171,19 +180,24 @@ class Tensor(object):
 
 class OperationRegister(type):
     """
-    TODO.
+    Meta class of :py:class:`Operation` that performs instance caching indexed by tensorflow op
+    instances. Additionaly, all derived classes are registered in a mapping using their type's for
+    faster op class lookup.
     """
 
     classes = {}
     instances = {}
 
     def __new__(metacls, classname, bases, classdict):
+        # when not set explicitly in that class, set type to the class name
         classdict.setdefault("type", classname)
         cls = super(OperationRegister, metacls).__new__(metacls, classname, bases, classdict)
+        # register the class
         metacls.classes[cls.type] = cls
         return cls
 
     def __call__(cls, sess, tfoperation):
+        # simply caching
         if tfoperation not in cls.instances:
             cls.instances[tfoperation] = super(OperationRegister, cls).__call__(sess, tfoperation)
         return cls.instances[tfoperation]
@@ -216,7 +230,7 @@ class Operation(object):
     def __init__(self, sess, tfoperation):
         super(Operation, self).__init__()
 
-        # check tfoperation type and our type
+        # compare types as a cross check
         if self.type != tfoperation.type:
             raise OperationMismatchException("operation types do not match: %s, %s" \
                 % (self.type, tfoperation.type))
@@ -255,7 +269,7 @@ class Operation(object):
     @staticmethod
     def factory(func):
         """
-        Returns new op classes whose static function will be set to *func*. The name of *func* will
+        Returns a new op class whose static function will be set to *func*. The name of *func* will
         also be the op class name.
         """
         name = func.__name__

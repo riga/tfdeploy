@@ -11,9 +11,9 @@ __copyright__  = "Copyright 2016, Marcel Rieger"
 __credits__    = ["Marcel Rieger", "Benjamin Fischer"]
 __license__    = "MIT"
 __status__     = "Development"
-__version__    = "0.1.2"
+__version__    = "0.1.3"
 
-__all__ = ["Model", "ModelException", "Operation", "OperationException"]
+__all__ = ["Model", "Operation", "UnknownOperationException", "OperationMismatchException"]
 
 
 import os
@@ -21,10 +21,6 @@ import re
 import cPickle
 from uuid import uuid4
 import numpy as np
-
-
-class ModelException(Exception):
-    pass
 
 
 class Model(object):
@@ -56,8 +52,6 @@ class Model(object):
 
     def add(self, tensor, sess=None):
         if not isinstance(tensor, Tensor):
-            if sess is None:
-                raise Exception("tensor conversion requires session")
             tensor = Tensor(sess, tensor)
 
         self.root.add(tensor)
@@ -91,6 +85,9 @@ class Tensor(object):
 
     def __init__(self, sess, tftensor):
         super(Tensor, self).__init__()
+
+        if not sess:
+            raise ValueError("not a valid tensorflow session: %s" % sess)
 
         self.name = None
         self.op = None
@@ -152,7 +149,11 @@ class OperationRegister(type):
         return cls.instances[tfoperation]
 
 
-class OperationException(Exception):
+class UnknownOperationException(Exception):
+    pass
+
+
+class OperationMismatchException(Exception):
     pass
 
 

@@ -131,4 +131,4 @@ Out[3]: 0.2995444191343964
 ## Authors
 
 - Marcel R. ([riga](https://github.com/riga))
-- Benjamin F. ([riga](https://github.com/bfis))
+- Benjamin F. ([bfis](https://github.com/bfis))

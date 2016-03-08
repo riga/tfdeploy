@@ -27,6 +27,9 @@ _locals = locals()
 
 
 class Model(object):
+    """
+    TODO.
+    """
 
     value_index_cre = re.compile("\:\d+$")
     default_value_index = 0
@@ -40,6 +43,10 @@ class Model(object):
             self.load(path)
 
     def get(self, name):
+        """
+        Returns a tensor given by *name* using a deep lookup within the model. *None* is returned
+        when no tensor was found. In case a tensor is passed, it's name is used for the lookup.
+        """
         if isinstance(name, Tensor):
             name = name.name
         if not self.value_index_cre.search(name):
@@ -54,12 +61,20 @@ class Model(object):
         return self.get(name) is not None
 
     def add(self, tensor, sess=None):
+        """
+        Adds a new *tensor* to the root set. When *tensor* is not an instance of :py:class:`Tensor`
+        but an instance of ``tensorflow.Tensor``, it is converted first. In that case, *sess* should
+        be a valid tensorflow session.
+        """
         if not isinstance(tensor, Tensor):
             tensor = Tensor(sess, tensor)
 
         self.root.add(tensor)
 
     def load(self, path):
+        """
+        Loads all tensors from a file defined by *path* and adds them to the root set.
+        """
         path = os.path.expandvars(os.path.expanduser(path))
         with open(path, "r") as f:
             tensors = cPickle.load(f)
@@ -67,12 +82,18 @@ class Model(object):
             self.add(t)
 
     def save(self, path):
+        """
+        Saves all tensors of the root set to a file defined by *path*.
+        """
         path = os.path.expandvars(os.path.expanduser(path))
         with open(path, "w") as f:
             cPickle.dump(self.root, f)
 
 
 class TensorRegister(type):
+    """
+    TODO.
+    """
 
     instances = {}
 
@@ -83,6 +104,9 @@ class TensorRegister(type):
 
 
 class Tensor(object):
+    """
+    TODO.
+    """
 
     __metaclass__ = TensorRegister
 
@@ -105,6 +129,11 @@ class Tensor(object):
             self.op = Operation.new(sess, tftensor.op)
 
     def get(self, name):
+        """
+        Returns a tensor given by *name* using a deep lookup within the inputs of the op. Note that
+        *this* tensor is returned when *name* is correct. *None* is returned when no tensor was
+        found.
+        """
         if self.name == name:
             return self
         elif self.op is None:
@@ -113,6 +142,11 @@ class Tensor(object):
             return self.op.get(name)
 
     def eval(self, feed_dict=None, _uuid=None):
+        """ eval(feed_dict=None)
+        Returns the value of this tensor based on the evaluation of all dependent ops and tensors.
+        You can overwrite values of dependent tensors using *feed_dict*, a mapping of tensors to
+        numpy arrays, which is passed down the evaluation chain.
+        """
         if _uuid is None:
             _uuid = uuid4()
 
@@ -136,6 +170,9 @@ class Tensor(object):
 
 
 class OperationRegister(type):
+    """
+    TODO.
+    """
 
     classes = {}
     instances = {}
@@ -153,14 +190,24 @@ class OperationRegister(type):
 
 
 class UnknownOperationException(Exception):
+    """
+    An exception which is raised when trying to convert an unknown tensorflow.
+    """
     pass
 
 
 class OperationMismatchException(Exception):
+    """
+    An exception which is raised during instantiation of an op whose type does not match the
+    underlying tensorflow op.
+    """
     pass
 
 
 class Operation(object):
+    """
+    TODO.
+    """
 
     __metaclass__ = OperationRegister
 
@@ -178,15 +225,27 @@ class Operation(object):
 
     @classmethod
     def new(cls, sess, tfoperation):
+        """
+        Factory function that takes a tensorflow session *sess* and a tensorflow op *tfoperation*
+        and returns an instance of the appropriate op class. Raises an exception of type
+        :py:exc:`UnknownOperationException` in case the requested op type is not known.
+        """
         if tfoperation.type not in cls.classes:
             raise UnknownOperationException("unknown operation: %s" % tfoperation.type)
 
         return cls.classes[tfoperation.type](sess, tfoperation)
 
     def get(self, name):
+        """
+        Returns a tensor given by *name* using a deep lookup within this op. *None* is returned when
+        no tensor was found.
+        """
         return reduce(lambda t1,t2: t1 or t2.get(name), self.inputs, None)
 
     def eval(self, feed_dict, _uuid):
+        """ eval(feed_dict=None)
+        Returns the value of the output tensor. See :py:meth:`Tensor.eval` for more info.
+        """
         return self.func(*(t.eval(feed_dict=feed_dict, _uuid=_uuid) for t in self.inputs))
 
     @staticmethod
@@ -195,6 +254,10 @@ class Operation(object):
 
     @staticmethod
     def factory(func):
+        """
+        Returns new op classes whose static function will be set to *func*. The name of *func* will
+        also be the op class name.
+        """
         name = func.__name__
         classdict = {"func": staticmethod(func)}
         Op = Operation.__metaclass__(name, (Operation,), classdict)

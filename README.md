@@ -1,6 +1,6 @@
 # tfdeploy
 
-Deploy [tensorflow](https://www.tensorflow.org) graphs for *insanely-fast* model evaluation and export to *tensorflow-less* environments via [numpy](http://www.numpy.org).
+Deploy [tensorflow](https://www.tensorflow.org) graphs for *insanely-fast* model evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
 
 
 ## Why?

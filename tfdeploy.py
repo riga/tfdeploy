@@ -2,7 +2,7 @@
 
 """
 Deploy tensorflow graphs for insanely-fast model evaluation and export to tensorflow-less
-environments via numpy.
+environments running numpy.
 """
 
 

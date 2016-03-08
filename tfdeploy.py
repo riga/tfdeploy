@@ -173,9 +173,6 @@ class Operation(object):
     def eval(self, feed_dict, _uuid):
         return self.func(*(t.eval(feed_dict=feed_dict, _uuid=_uuid) for t in self.inputs))
 
-    def __call__(self, *args, **kwargs):
-        return self.eval(*args, **kwargs)
-
     @staticmethod
     def func():
         raise NotImplementedError
@@ -222,31 +219,3 @@ class Softmax(Operation):
     def func(a):
         e = np.exp(a)
         return np.divide(e, np.sum(e, axis=-1, keepdims=True))
-
-
-if __name__ == "__main__":
-    xinp = np.random.rand(10000, 784).astype("float32")
-
-    import tensorflow as tf
-
-    sess = tf.Session()
-
-    x = tf.placeholder("float", shape=[None, 784], name="input")
-
-    W = tf.Variable(tf.truncated_normal([784, 100], stddev=0.05))
-    b = tf.Variable(tf.zeros([100]))
-    y = tf.nn.softmax(tf.matmul(x, W) + b, name="output")
-
-    sess.run(tf.initialize_all_variables())
-
-    model = Model()
-    model.add(y, sess)
-    model.save("model.pkl")
-
-    def testtf():
-        return y.eval(session=sess, feed_dict={x: xinp})
-
-    output = model.get("output")
-    input = model.get("input")
-    def test2():
-        return output.eval({input: xinp})

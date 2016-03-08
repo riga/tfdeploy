@@ -3,5 +3,6 @@
 *.pyc
 *.log
 *.DS_Store
+*.pkl
 dist
 MANIFEST

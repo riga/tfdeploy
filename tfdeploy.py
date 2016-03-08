@@ -11,7 +11,7 @@ __copyright__  = "Copyright 2016, Marcel Rieger"
 __credits__    = ["Marcel Rieger", "Benjamin Fischer"]
 __license__    = "MIT"
 __status__     = "Development"
-__version__    = "0.1.4"
+__version__    = "0.1.5"
 
 __all__ = ["Model", "Operation", "UnknownOperationException", "OperationMismatchException"]
 
@@ -21,6 +21,9 @@ import re
 import cPickle
 from uuid import uuid4
 import numpy as np
+
+
+_locals = locals()
 
 
 class Model(object):
@@ -190,45 +193,61 @@ class Operation(object):
     def func():
         raise NotImplementedError
 
-
-class Identity(Operation):
-
     @staticmethod
-    def func(a):
-        return a
+    def factory(func):
+        name = func.__name__
+        classdict = {"func": staticmethod(func)}
+        Op = Operation.__metaclass__(name, (Operation,), classdict)
+        _locals[name] = Op
+        return Op
 
 
-class Add(Operation):
-
-    @staticmethod
-    def func(a, b):
-        return np.add(a, b)
+@Operation.factory
+def Identity(a):
+    return a
 
 
-class Sub(Operation):
-
-    @staticmethod
-    def func(a, b):
-        return np.subtract(a, b)
+@Operation.factory
+def Add(a, b):
+    return np.add(a, b)
 
 
-class MatMul(Operation):
-
-    @staticmethod
-    def func(a, b):
-        return np.dot(a, b)
+@Operation.factory
+def Sub(a, b):
+    return np.subtract(a, b)
 
 
-class Mul(Operation):
-
-    @staticmethod
-    def func(a, b):
-        return np.multiply(a, b)
+@Operation.factory
+def Mul(a, b):
+    return np.multiply(a, b)
 
 
-class Softmax(Operation):
+@Operation.factory
+def Div(a, b):
+    return np.divide(a, b)
 
-    @staticmethod
-    def func(a):
-        e = np.exp(a)
-        return np.divide(e, np.sum(e, axis=-1, keepdims=True))
+
+@Operation.factory
+def MatMul(a, b):
+    return np.dot(a, b)
+
+
+@Operation.factory
+def Round(a):
+    return np.round(a)
+
+
+@Operation.factory
+def Floor(a):
+    return np.floor(a)
+
+
+@Operation.factory
+def Ceil(a):
+    return np.ceil(a)
+
+
+@Operation.factory
+def Softmax(a):
+    e = np.exp(a)
+    return np.divide(e, np.sum(e, axis=-1, keepdims=True))

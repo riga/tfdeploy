@@ -66,7 +66,7 @@ result = y.eval({x: batch})
 
 ##### Write your own ``Operation``
 
-tfdeploy supports most of the ``Operation``'s implemented in tensorflow. However, if you miss one (in that case, submit an issue ;) ) or if you're using custom layers, you might want to extend tfdeploy:
+tfdeploy supports most of the ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit an issue ;) ) or if you're using custom layers, you might want to extend tfdeploy:
 
 ```python
 import tensorflow as tf

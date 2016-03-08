@@ -9,6 +9,14 @@ Working with tensorflow is awesome. Installing tensorflow on old OS's like SL6 i
 
 tfdeploy solves this problem while only requiring numpy. It is a single file with less then 150 lines of core code, so you can easily copy it into your project. In addition, tfdeploy is [*way faster*](#performance) than using tensorflow's ``Tensor.eval``.
 
+Install it via
+
+```bash
+pip install tfdeploy
+```
+
+or by simply copying the file into your project.
+
 
 ## How?
 
@@ -122,5 +130,5 @@ Out[3]: 0.2995444191343964
 
 ## Authors
 
-Marcel R. ([riga](https://github.com/riga))
-Benjamin F. ([riga](https://github.com/bfis))
+- Marcel R. ([riga](https://github.com/riga))
+- Benjamin F. ([riga](https://github.com/bfis))

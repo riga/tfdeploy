@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
 
+import os
 from distutils.core import setup
 import tfdeploy as td
 
 
-with open("README.md") as f:
-    long_description = f.read()
+readme = "README.rst"
+if os.path.isfile(readme):
+    with open(readme) as f:
+        long_description = f.read()
+else:
+    long_description = ""
 
 keywords = [
     "tensorflow", "export", "dump", "numpy", "model", "predict", "evaluate"

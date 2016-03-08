@@ -19,12 +19,15 @@ keywords = [
 
 classifiers = [
     "Programming Language :: Python",
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
     "Programming Language :: Python :: 2",
-    "Programming Language :: Python :: 3"
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Information Technology",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 
 

@@ -11,7 +11,7 @@ __copyright__  = "Copyright 2016, Marcel Rieger"
 __credits__    = ["Marcel Rieger", "Benjamin Fischer"]
 __license__    = "MIT"
 __status__     = "Development"
-__version__    = "0.1.3"
+__version__    = "0.1.4"
 
 __all__ = ["Model", "Operation", "UnknownOperationException", "OperationMismatchException"]
 
@@ -87,7 +87,7 @@ class Tensor(object):
         super(Tensor, self).__init__()
 
         if not sess:
-            raise ValueError("not a valid tensorflow session: %s" % sess)
+            raise ValueError("bad tensorflow session: %s" % sess)
 
         self.name = None
         self.op = None
@@ -168,7 +168,7 @@ class Operation(object):
 
         # check tfoperation type and our type
         if self.type != tfoperation.type:
-            raise OperationException("operation types do not match: %s, %s" \
+            raise OperationMismatchException("operation types do not match: %s, %s" \
                 % (self.type, tfoperation.type))
 
         self.inputs = tuple(Tensor(sess, tftensor) for tftensor in tfoperation.inputs)
@@ -176,7 +176,7 @@ class Operation(object):
     @classmethod
     def new(cls, sess, tfoperation):
         if tfoperation.type not in cls.classes:
-            raise OperationException("unknown operation: %s" % tfoperation.type)
+            raise UnknownOperationException("unknown operation: %s" % tfoperation.type)
 
         return cls.classes[tfoperation.type](sess, tfoperation)
 

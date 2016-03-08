@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-TODO.
+Deploy tensorflow graphs for insanely-fast model evaluation and export to tensorflow-less
+environments via numpy.
 """
 
 
@@ -12,7 +13,7 @@ __license__    = "MIT"
 __status__     = "Development"
 __version__    = "0.1.0"
 
-__all__ = ["Model", "Operation"]
+__all__ = ["Model", "ModelException", "Operation", "OperationException"]
 
 
 import os
@@ -20,6 +21,10 @@ import re
 import cPickle
 from uuid import uuid4
 import numpy as np
+
+
+class ModelException(Exception):
+    pass
 
 
 class Model(object):
@@ -36,6 +41,8 @@ class Model(object):
             self.load(path)
 
     def get(self, name):
+        if isinstance(name, Tensor):
+            name = name.name
         if not self.value_index_cre.search(name):
             name += ":%d" % self.default_value_index
 
@@ -145,6 +152,10 @@ class OperationRegister(type):
         return cls.instances[tfoperation]
 
 
+class OperationException(Exception):
+    pass
+
+
 class Operation(object):
 
     __metaclass__ = OperationRegister
@@ -156,14 +167,15 @@ class Operation(object):
 
         # check tfoperation type and our type
         if self.type != tfoperation.type:
-            raise Exception("operation types do not match: %s, %s" % (self.type, tfoperation.type))
+            raise OperationException("operation types do not match: %s, %s" \
+                % (self.type, tfoperation.type))
 
         self.inputs = tuple(Tensor(sess, tftensor) for tftensor in tfoperation.inputs)
 
     @classmethod
     def new(cls, sess, tfoperation):
         if tfoperation.type not in cls.classes:
-            raise Exception("unknown operation: %s" % tfoperation.type)
+            raise OperationException("unknown operation: %s" % tfoperation.type)
 
         return cls.classes[tfoperation.type](sess, tfoperation)
 

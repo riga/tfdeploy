@@ -83,6 +83,13 @@ class InvertedSoftmax(td.Operation):
         e = np.exp(-a)
         return np.divide(e, np.sum(e, axis=-1, keepdims=True))
 
+# this is equal to
+
+@Operation.factory
+def InvertedSoftmax(a):
+    e = np.exp(-a)
+    return np.divide(e, np.sum(e, axis=-1, keepdims=True))
+
 # now, we're good to go
 model = td.Model()
 model.add(y)

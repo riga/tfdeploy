@@ -24,10 +24,9 @@ To boil it down, <span style="color:#DE4527;">tf</span><span style="color:#5695F
 
 - is lightweight. A single file with < 150 lines of core code. Just copy it to your project.
 - [way faster](#performance) then using tensorflow's ``Tensor.eval``.
-- **does not need tensroflow** during evaluation.
+- **does not need tensorflow** during evaluation.
 - only depends on numpy.
 - can load one or more models from a single file.
-
 
 
 ## How?

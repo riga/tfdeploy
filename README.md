@@ -85,7 +85,7 @@ class InvertedSoftmax(td.Operation):
 
 # this is equal to
 
-@Operation.factory
+@td.Operation.factory
 def InvertedSoftmax(a):
     e = np.exp(-a)
     return np.divide(e, np.sum(e, axis=-1, keepdims=True))

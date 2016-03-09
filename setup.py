@@ -37,7 +37,7 @@ setup(
     author           = ", ".join(td.__credits__),
     description      = td.__doc__.strip(),
     license          = td.__license__,
-    url              = "https://github.com/riga/" + td.__name__,
+    url              = td.__contact__,
     py_modules       = [td.__name__],
     keywords         = keywords,
     classifiers      = classifiers,

@@ -1,11 +1,11 @@
 # tfdeploy
 
-Deploy [tensorflow](https://www.tensorflow.org) graphs for *insanely-fast* model evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
+Deploy [tensorflow](https://www.tensorflow.org) graphs for *insanely-fast* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
 
 
 ## Why?
 
-Working with tensorflow is awesome. Installing tensorflow on old OS's like SL6 isn't. This is quite a problem when you want to deploy your trained model to one of those machines.
+Working with tensorflow is awesome. Installing tensorflow on old OS's like SL6 isn't. This is quite a problem when you want to deploy your trained model to such a machine.
 
 tfdeploy solves this problem while only requiring numpy. It is a single file with less then 150 lines of core code, so you can easily copy it into your project. In addition, tfdeploy is [*way faster*](#performance) than using tensorflow's ``Tensor.eval``.
 
@@ -66,7 +66,7 @@ result = y.eval({x: batch})
 
 ##### Write your own ``Operation``
 
-tfdeploy supports most of the ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit an issue ;) ) or if you're using custom layers, you might want to extend tfdeploy:
+tfdeploy supports most of the ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom layers, you might want to extend tfdeploy:
 
 ```python
 import tensorflow as tf
@@ -132,3 +132,28 @@ Out[3]: 0.2995444191343964
 
 - Marcel R. ([riga](https://github.com/riga))
 - Benjamin F. ([bfis](https://github.com/bfis))
+
+
+## License
+
+The MIT License (MIT)
+
+Copyright (c) 2016 Marcel R.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

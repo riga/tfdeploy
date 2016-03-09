@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Deploy tensorflow graphs for insanely-fast model evaluation and export to tensorflow-less
+Deploy tensorflow graphs for insanely-fast evaluation and export to tensorflow-less
 environments running numpy.
 """
 
@@ -9,6 +9,7 @@ environments running numpy.
 __author__     = "Marcel Rieger"
 __copyright__  = "Copyright 2016, Marcel Rieger"
 __credits__    = ["Marcel Rieger", "Benjamin Fischer"]
+__contact__    = "https://github.com/riga/tfdeploy"
 __license__    = "MIT"
 __status__     = "Development"
 __version__    = "0.1.5"

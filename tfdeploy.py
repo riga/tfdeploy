@@ -29,7 +29,32 @@ _locals = locals()
 
 class Model(object):
     """
-    TODO.
+    A trained model that contains one or more converted tensorflow graphs. Usage:
+
+    .. code-block:: python
+
+       import tensorflow as tf
+       import tfdeploy as td
+
+       # build your graph, use names for input and output tensors
+       sess = tf.Session()
+       x = tf.placeholder("float", shape=[None, 784], name="input")
+       W = tf.Variable(tf.truncated_normal([784, 100], stddev=0.05))
+       b = tf.Variable(tf.zeros([100]))
+       y = tf.nn.softmax(tf.matmul(x, W) + b, name="output")
+       sess.run(tf.initialize_all_variables())
+
+       # ... training ...
+
+       # create a model and save it to disk
+       model = Model()
+       model.add(y, sess)
+       model.save("model.pkl")
+
+    .. py:attribute:: root
+       type: set
+
+       The set of all contained root tensors.
     """
 
     value_index_cre = re.compile("\:\d+$")
@@ -112,7 +137,25 @@ class TensorRegister(type):
 
 class Tensor(object):
     """
-    TODO.
+    Building block of a model. In *graph* terms, tensors represent connections between nodes (ops)
+    of a graph. It contains information on the op it results from.
+
+    .. py:attribute:: name
+       type: string
+
+       The name of the tensor.
+
+    .. py:attribute:: op
+       type: None, Operation
+
+       The op instance that defines the value of this tensor. When created from a
+       ``tensorflow.Placeholder`` or a ``tensorflow.Variable``, op will be *None*.
+
+    .. py:attribute:: value
+       type: None, numpy.ndarray
+
+       The value of this tensor. When created from a ``tensorflow.Variable``, this will be the value
+       of that variable, or *None* otherwise until it is evaluated the first time.
     """
 
     __metaclass__ = TensorRegister
@@ -221,7 +264,14 @@ class OperationMismatchException(Exception):
 
 class Operation(object):
     """
-    TODO.
+    Building block of a model. In *graph* terms, operations (ops) represent nodes that are connected
+    via tensors. It contains information on its input tensors.
+
+    .. py:attribute:: inputs
+       type: tuple
+
+       Tensors that are input to this op. Their order is important as they are forwarded to *func*
+       for evaluation.
     """
 
     __metaclass__ = OperationRegister
@@ -265,6 +315,10 @@ class Operation(object):
 
     @staticmethod
     def func():
+        """ func(*args)
+        The actual op logic. Must be implemented in inheriting classes. All input tensors are
+        forwarded to this method for evaluation.
+        """
         raise NotImplementedError
 
     @staticmethod
@@ -282,50 +336,96 @@ class Operation(object):
 
 @Operation.factory
 def Identity(a):
+    """
+    Identity op.
+    """
     return a
 
 
 @Operation.factory
 def Add(a, b):
+    """
+    Addition op.
+    """
     return np.add(a, b)
 
 
 @Operation.factory
 def Sub(a, b):
+    """
+    Subtraction op.
+    """
     return np.subtract(a, b)
 
 
 @Operation.factory
 def Mul(a, b):
+    """
+    Multiplication op.
+    """
     return np.multiply(a, b)
 
 
 @Operation.factory
 def Div(a, b):
+    """
+    Division op.
+    """
     return np.divide(a, b)
 
 
 @Operation.factory
 def MatMul(a, b):
+    """
+    Matrix multiplication op.
+    """
     return np.dot(a, b)
 
 
 @Operation.factory
+def Cross(a, b):
+    """
+    Cross product op.
+    """
+    return np.cross(a, b)
+
+
+@Operation.factory
 def Round(a):
+    """
+    Round op.
+    """
     return np.round(a)
 
 
 @Operation.factory
 def Floor(a):
+    """
+    Floor round op.
+    """
     return np.floor(a)
 
 
 @Operation.factory
 def Ceil(a):
+    """
+    Ceil round op.
+    """
     return np.ceil(a)
 
 
 @Operation.factory
+def Mod(a, b):
+    """
+    Modulo op.
+    """
+    return np.mod(a, b)
+
+
+@Operation.factory
 def Softmax(a):
+    """
+    Softmax op.
+    """
     e = np.exp(a)
     return np.divide(e, np.sum(e, axis=-1, keepdims=True))

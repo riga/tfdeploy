@@ -1,21 +1,33 @@
-# tfdeploy
+<img src="https://raw.githubusercontent.com/riga/tfdeploy/master/logo.png" alt="tfdeploy logo" style="width:250px;"/>
+-
 
 Deploy [tensorflow](https://www.tensorflow.org) graphs for *insanely-fast* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
 
+##### Installation
 
-## Why?
-
-Working with tensorflow is awesome. Installing tensorflow on old OS's like SL6 isn't. This is quite a problem when you want to deploy your trained model to such a machine.
-
-tfdeploy solves this problem while only requiring numpy. It is a single file with less then 150 lines of core code, so you can easily copy it into your project. In addition, tfdeploy is [*way faster*](#performance) than using tensorflow's ``Tensor.eval``.
-
-Install it via [pip](https://pypi.python.org/pypi/tfdeploy)
+Via [pip](https://pypi.python.org/pypi/tfdeploy)
 
 ```bash
 pip install tfdeploy
 ```
 
 or by simply copying the file into your project.
+
+
+## Why?
+
+Working with tensorflow is awesome. Model definition and training is simple yet powerful, and the range of built-in features is just striking.
+
+However, when it comes down to model deployment and evaluation things get a bit more cumbersome than they should be. You either export your graph to a new file *and* [save your trained variables](https://www.tensorflow.org/versions/master/how_tos/variables/index.html#saving-variables) in a separate file, or you make use of tensorflow's [serving system](https://www.tensorflow.org/versions/master/tutorials/tfserve/index.html). Wouldn't it be great if you could just export your model to a simple numpy-based callable? Of course it would. And this is exactly what <span style="color:#DE4527;">tf</span><span style="color:#5695FC;">deploy</span> does for you.
+
+To boil it down, <span style="color:#DE4527;">tf</span><span style="color:#5695FC;">deploy</span>
+
+- is lightweight. A single file with < 150 lines of core code. Just copy it to your project.
+- [way faster](#performance) then using tensorflow's ``Tensor.eval``.
+- **does not need tensroflow** during evaluation.
+- only depends on numpy.
+- can load one or more models from a single file.
+
 
 
 ## How?
@@ -43,7 +55,7 @@ sess.run(tf.initialize_all_variables())
 
 # create a tfdeploy model and save it to disk
 model = td.Model()
-model.add(y) # y and all its ops and related tensors are added recursively
+model.add(y, sess) # y and all its ops and related tensors are added recursively
 model.save("model.pkl")
 ```
 
@@ -66,7 +78,7 @@ result = y.eval({x: batch})
 
 ##### Write your own ``Operation``
 
-tfdeploy supports most of the ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom layers, you might want to extend tfdeploy:
+<span style="color:#DE4527;">tf</span><span style="color:#5695FC;">deploy</span> supports most of the ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom ops, you might want to extend <span style="color:#DE4527;">tf</span><span style="color:#5695FC;">deploy</span>:
 
 ```python
 import tensorflow as tf
@@ -78,7 +90,7 @@ import tfdeploy as td
 # before creating the td.Model, you should add that op to tfdeploy
 
 class InvertedSoftmax(td.Operation):
-    @classmethod
+    @staticmethod
     def func(a):
         e = np.exp(-a)
         return np.divide(e, np.sum(e, axis=-1, keepdims=True))
@@ -99,7 +111,7 @@ model.save("model.pkl")
 
 ## Performance
 
-tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal operations are nearly overhead-free. All mathematical operations use numpy vectorization. On average, evaluation is *70%* faster than plain tensorflow. (tba: test with large-scale network)
+<span style="color:#DE4527;">tf</span><span style="color:#5695FC;">deploy</span> is lightweight (1 file, < 150 lines of core code) and fast. Internal operations are nearly overhead-free. All mathematical operations use numpy vectorization. On average, evaluation is *70%* faster than plain tensorflow. (tba: test with large-scale network)
 
 ##### Test code (based on ["Convert your graph"](#convert-your-graph))
 

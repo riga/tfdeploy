@@ -246,10 +246,11 @@ class OperationRegister(type):
 
     def __new__(metacls, classname, bases, classdict):
         # when not set explicitly in that class, set type to the class name
-        classdict.setdefault("type", classname)
+        classdict.setdefault("types", (classname,))
         cls = super(OperationRegister, metacls).__new__(metacls, classname, bases, classdict)
-        # register the class
-        metacls.classes[cls.type] = cls
+        # register the class for each of its types
+        for type in cls.types:
+            metacls.classes[type] = cls
         return cls
 
     def __call__(cls, tfoperation, sess):
@@ -278,6 +279,12 @@ class Operation(object):
     """
     Building block of a model. In *graph* terms, operations (ops) represent nodes that are connected
     via tensors. It contains information on its input tensors.
+
+    .. py:attribute:: types
+       type: tuple
+       classmember
+
+       The types of tensorflow ops that this op can represent.
 
     .. py:attribute:: name
        type: string
@@ -314,17 +321,17 @@ class Operation(object):
 
     __metaclass__ = OperationRegister
 
-    type = None
+    types = tuple()
     unpack = True
-    attrs = None
+    attrs = tuple()
 
     def __init__(self, tfoperation, sess):
         super(Operation, self).__init__()
 
         # compare types as a cross check
-        if self.type != tfoperation.type:
+        if tfoperation.type not in self.types:
             raise OperationMismatchException("operation types do not match: %s, %s" \
-                % (self.type, tfoperation.type))
+                % (self.types, tfoperation.type))
 
         self.name = tfoperation.name
         self.inputs = tuple(Tensor(tftensor, sess) for tftensor in tfoperation.inputs)
@@ -677,7 +684,7 @@ def BatchMatMul(a, b, adj_a, adj_b):
     return r
 
 
-@Operation.factory
+@Operation.factory(types=("MatrixDeterminant", "BatchMatrixDeterminant"))
 def MatrixDeterminant(a):
     """
     Matrix det op.
@@ -685,15 +692,7 @@ def MatrixDeterminant(a):
     return np.linalg.det(a)
 
 
-@Operation.factory
-def BatchMatrixDeterminant(a):
-    """
-    Batched matrix det op.
-    """
-    return np.linalg.det(a)
-
-
-@Operation.factory
+@Operation.factory(types=("MatrixInverse", "BatchMatrixInverse"))
 def MatrixInverse(a):
     """
     Matrix inversion op.
@@ -701,15 +700,7 @@ def MatrixInverse(a):
     return np.linalg.inv(a)
 
 
-@Operation.factory
-def BatchMatrixInverse(a):
-    """
-    Batched matrix inversion op.
-    """
-    return np.linalg.inv(a)
-
-
-@Operation.factory
+@Operation.factory(types=("Cholesky", "BatchCholesky"))
 def Cholesky(a):
     """
     Cholesky decomposition op.
@@ -717,15 +708,7 @@ def Cholesky(a):
     return np.linalg.cholesky(a)
 
 
-@Operation.factory
-def BatchCholesky(a):
-    """
-    Batched Cholesky decomposition op.
-    """
-    return np.linalg.cholesky(a)
-
-
-@Operation.factory
+@Operation.factory(types=("SelfAdjointEig", "BatchSelfAdjointEig"))
 def SelfAdjointEig(a):
     """
     Eigen decomp op.
@@ -735,28 +718,10 @@ def SelfAdjointEig(a):
     return np.append(*np.linalg.eig(a)).reshape(*shape)
 
 
-@Operation.factory
-def BatchSelfAdjointEig(a):
-    """
-    Batched eigen decomp op.
-    """
-    shape = list(a.shape)
-    shape[-2] += 1
-    return np.append(*np.linalg.eig(a)).reshape(*shape)
-
-
-@Operation.factory
+@Operation.factory(types=("MatrixSolve", "BatchMatrixSolve"))
 def MatrixSolve(a, b):
     """
     Matrix solve op.
-    """
-    return np.linalg.solve(a, b)
-
-
-@Operation.factory
-def BatchMatrixSolve(a, b):
-    """
-    Batched matrix solve op.
     """
     return np.linalg.solve(a, b)
 

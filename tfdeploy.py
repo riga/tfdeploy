@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Deploy tensorflow graphs for insanely-fast evaluation and export to tensorflow-less environments
-running numpy.
+Deploy tensorflow graphs for faster evaluation and export to tensorflow-less environments running
+numpy.
 """
 
 
@@ -296,11 +296,6 @@ class Operation(object):
 
        Tensors that are input to this op. Their order is important as they are forwarded to *func*
        for evaluation.
-
-    .. py:attribute:: type
-       type: string
-
-       The type if the op which should be the same as the original tensorflow op type.
 
     .. py:attribute:: unpack
        type: bool
@@ -788,6 +783,62 @@ def IFFT2D(a):
     Discrete inverse 2D FT op.
     """
     return np.fft.ifft2(a)
+
+
+@Operation.factory(attrs=("keep_dims",))
+def Sum(a, reduction_indices, keep_dims):
+    """
+    Sum reduction op.
+    """
+    return np.sum(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+
+
+@Operation.factory(attrs=("keep_dims",))
+def Prod(a, reduction_indices, keep_dims):
+    """
+    Prod reduction op.
+    """
+    return np.prod(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+
+
+@Operation.factory(attrs=("keep_dims",))
+def Min(a, reduction_indices, keep_dims):
+    """
+    Min reduction op.
+    """
+    return np.amin(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+
+
+@Operation.factory(attrs=("keep_dims",))
+def Max(a, reduction_indices, keep_dims):
+    """
+    Max reduction op.
+    """
+    return np.amax(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+
+
+@Operation.factory(attrs=("keep_dims",))
+def Mean(a, reduction_indices, keep_dims):
+    """
+    Mean reduction op.
+    """
+    return np.mean(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+
+
+@Operation.factory(attrs=("keep_dims",))
+def All(a, reduction_indices, keep_dims):
+    """
+    All reduction op.
+    """
+    return np.all(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+
+
+@Operation.factory(attrs=("keep_dims",))
+def Any(a, reduction_indices, keep_dims):
+    """
+    Any reduction op.
+    """
+    return np.any(a, axis=tuple(reduction_indices), keepdims=keep_dims)
 
 
 @Operation.factory

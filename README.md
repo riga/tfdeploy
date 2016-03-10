@@ -1,7 +1,7 @@
 <img src="https://raw.githubusercontent.com/riga/tfdeploy/master/logo.png" alt="tfdeploy logo" width="250"/>
 -
 
-Deploy [tensorflow](https://www.tensorflow.org) graphs for *insanely-fast* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
+Deploy [tensorflow](https://www.tensorflow.org) graphs for *faster* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
 
 
 ##### Evaluation usage

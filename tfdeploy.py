@@ -279,6 +279,11 @@ class Operation(object):
     Building block of a model. In *graph* terms, operations (ops) represent nodes that are connected
     via tensors. It contains information on its input tensors.
 
+    .. py:attribute:: name
+       type: string
+
+       The name of the op.
+
     .. py:attribute:: inputs
        type: tuple
 
@@ -321,6 +326,7 @@ class Operation(object):
             raise OperationMismatchException("operation types do not match: %s, %s" \
                 % (self.type, tfoperation.type))
 
+        self.name = tfoperation.name
         self.inputs = tuple(Tensor(tftensor, sess) for tftensor in tfoperation.inputs)
 
         # store attributes as kwargs for calls to eval
@@ -337,6 +343,15 @@ class Operation(object):
             raise UnknownOperationException("unknown operation: %s" % tfoperation.type)
 
         return cls.classes[tfoperation.type](tfoperation, sess)
+
+    def set_attr(self, attr, value):
+        """
+        Overwrites the value of an attribute *attr* with a new *value*.
+        """
+        if attr not in self.attrs:
+            raise AttributeError("no attribute '%s' in op '%s'" % (attr, self.name))
+
+        self.kwargs[self.attrs.index(attr)] = value
 
     def get(self, *names):
         """

@@ -3,6 +3,18 @@
 
 Deploy [tensorflow](https://www.tensorflow.org) graphs for *insanely-fast* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
 
+
+##### Evaluation usage
+
+```python
+model = tfdeploy.Model("/path/to/model.pkl")
+inp, outp = mode.get("input", "output")
+
+batch = numpy.random.rand(10000, 784)
+result = outp.eval({inp: batch})
+```
+
+
 ##### Installation
 
 Via [pip](https://pypi.python.org/pypi/tfdeploy)
@@ -67,8 +79,7 @@ import tfdeploy as td
 model = td.Model("model.pkl")
 
 # shorthand to x and y
-x = model.get("input")
-y = model.get("output")
+x, y = model.get("input", "output")
 
 # evaluate
 batch = np.random.rand(10000, 784)
@@ -120,8 +131,7 @@ batch = np.random.rand(10000, 784)
 def test_tf():
     return y.eval(session=sess, feed_dict={x: batch})
     
-x2 = model.get("input")
-y2 = model.get("output")
+x2, y2 = model.get("input", "output")
 def test_td():
     return y2.eval({x2: batch})
 ```

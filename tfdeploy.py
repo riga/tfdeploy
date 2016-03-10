@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Deploy tensorflow graphs for insanely-fast evaluation and export to tensorflow-less
-environments running numpy.
+Deploy tensorflow graphs for insanely-fast evaluation and export to tensorflow-less environments
+running numpy.
 """
 
 
@@ -807,6 +807,22 @@ def Real(a):
     Complex real op.
     """
     return np.real(a)
+
+
+@Operation.factory
+def FFT2D(a):
+    """
+    Discrete 2D FT op.
+    """
+    return np.fft.fft2(a)
+
+
+@Operation.factory
+def IFFT2D(a):
+    """
+    Discrete inverse 2D FT op.
+    """
+    return np.fft.ifft2(a)
 
 
 @Operation.factory

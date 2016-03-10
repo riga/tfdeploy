@@ -11,7 +11,7 @@ __all__ = ["OpsTestCase"]
 
 
 # get device from env
-CPU, GPU = tuple(range(2))
+CPU, GPU = range(2)
 DEVICE = CPU
 if os.environ.get("TD_TEST_GPU", "").lower() in ("1", "yes", "true"):
     DEVICE = GPU
@@ -218,12 +218,12 @@ class OpsTestCase(TestCase):
         self.check(t)
 
     def test_SelfAdjointEig(self):
-        t = tf.self_adjoint_eig(np.array([3, 2, 2, 1]).reshape(2, 2).astype("float32"))
+        t = tf.self_adjoint_eig(np.array([3,2,1, 2,4,5, 1,5,6]).reshape(3, 3).astype("float32"))
         # the order of eigen vectors and values may differ between tf and np, so only compare sum
         # and mean
         # also, different numerical algorithms are used, so account for difference in precision by
         # comparing numbers with 4 digits
-        self.check(t, ndigits=4, stats=True)
+        self.check(t, ndigits=4, stats=True, abs=True)
 
     def test_BatchSelfAdjointEig(self):
         t = tf.batch_self_adjoint_eig(np.array(3 * [3, 2, 2, 1]).reshape(3, 2, 2).astype("float32"))
@@ -260,6 +260,18 @@ class OpsTestCase(TestCase):
     def test_Real(self):
         t = tf.real(self.random(3, 4, complex=True))
         self.check(t)
+
+    def test_FFT2D(self):
+        # only defined for gpu
+        if DEVICE == GPU:
+            t = tf.fft2d(self.random(3, 4, complex=True))
+            self.check(t)
+
+    def test_IFFT2D(self):
+        # only defined for gpu
+        if DEVICE == GPU:
+            t = tf.ifft2d(self.random(3, 4, complex=True))
+            self.check(t)
 
     def test_Softmax(self):
         t = tf.nn.softmax(self.random(10, 5))

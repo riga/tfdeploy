@@ -21,6 +21,8 @@ import os
 import re
 import cPickle
 from uuid import uuid4
+from functools import reduce
+from itertools import product
 import numpy as np
 
 
@@ -69,11 +71,16 @@ class Model(object):
         if path is not None:
             self.load(path)
 
-    def get(self, name):
+    def get(self, *names):
         """
-        Returns a tensor given by *name* using a deep lookup within the model. *None* is returned
-        when no tensor was found. In case a tensor is passed, it's name is used for the lookup.
+        Returns one or more tensors given by *names* using a deep lookup within the model. *None* is
+        returned when no tensor was found. In case a tensor is passed, it's name is used for the
+        lookup.
         """
+        tensors = tuple(self._get(name) for name in names)
+        return tensors[0] if len(names) == 1 else tensors
+
+    def _get(self, name):
         if isinstance(name, Tensor):
             name = name.name
 
@@ -97,7 +104,7 @@ class Model(object):
         be a valid tensorflow session.
         """
         if not isinstance(tensor, Tensor):
-            tensor = Tensor(sess, tensor)
+            tensor = Tensor(tensor, sess)
 
         self.root.add(tensor)
 
@@ -128,10 +135,10 @@ class TensorRegister(type):
 
     instances = {}
 
-    def __call__(cls, sess, tftensor):
+    def __call__(cls, tftensor, sess):
         # simply caching
         if tftensor not in cls.instances:
-            cls.instances[tftensor] = super(TensorRegister, cls).__call__(sess, tftensor)
+            cls.instances[tftensor] = super(TensorRegister, cls).__call__(tftensor, sess)
         return cls.instances[tftensor]
 
 
@@ -160,7 +167,7 @@ class Tensor(object):
 
     __metaclass__ = TensorRegister
 
-    def __init__(self, sess, tftensor):
+    def __init__(self, tftensor, sess):
         super(Tensor, self).__init__()
 
         if not sess:
@@ -171,18 +178,23 @@ class Tensor(object):
         self.value = None
         self.last_uuid = None
 
-        # no op for variables and placeholders
-        # explicit value for variables
-        if tftensor.op.type == "Variable":
+        # no op for variables, placeholders and constants
+        # explicit value for variables and constants
+        if tftensor.op.type in ("Variable", "Const"):
             self.value = tftensor.eval(session=sess)
         elif tftensor.op.type != "Placeholder":
-            self.op = Operation.new(sess, tftensor.op)
+            self.op = Operation.new(tftensor.op, sess)
 
-    def get(self, name):
+    def get(self, *names):
         """
-        Returns a tensor given by *name* using a deep lookup within the inputs of the op. Note that
-        *this* tensor is returned when *name* matches. *None* is returned when no tensor was found.
+        Returns one or more tensors given by *names* using a deep lookup within the inputs of the
+        op. Note that *this* tensor is returned when the name matches. *None* is returned when no
+        tensor was found.
         """
+        tensors = tuple(self._get(name) for name in names)
+        return tensors[0] if len(names) == 1 else tensors
+
+    def _get(self, name):
         if self.name == name:
             return self
         elif self.op is None:
@@ -240,10 +252,10 @@ class OperationRegister(type):
         metacls.classes[cls.type] = cls
         return cls
 
-    def __call__(cls, sess, tfoperation):
+    def __call__(cls, tfoperation, sess):
         # simply caching
         if tfoperation not in cls.instances:
-            cls.instances[tfoperation] = super(OperationRegister, cls).__call__(sess, tfoperation)
+            cls.instances[tfoperation] = super(OperationRegister, cls).__call__(tfoperation, sess)
         return cls.instances[tfoperation]
 
 
@@ -272,13 +284,36 @@ class Operation(object):
 
        Tensors that are input to this op. Their order is important as they are forwarded to *func*
        for evaluation.
+
+    .. py:attribute:: type
+       type: string
+
+       The type if the op which should be the same as the original tensorflow op type.
+
+    .. py:attribute:: unpack
+       type: bool
+
+       If *True* (default), the values of evaluated input tensors are forwarded to *func* as single
+       arguments, or, otherwise, as a list.
+
+    .. py:attribute:: attrs
+       type: tuple
+
+       Names of the configuration attributes of the original tensorflow op.
+
+    .. py:attribute:: kwargs
+       type: list
+
+       Keyword arguments containing configuration values that will be passed to *func*.
     """
 
     __metaclass__ = OperationRegister
 
     type = None
+    unpack = True
+    attrs = None
 
-    def __init__(self, sess, tfoperation):
+    def __init__(self, tfoperation, sess):
         super(Operation, self).__init__()
 
         # compare types as a cross check
@@ -286,10 +321,13 @@ class Operation(object):
             raise OperationMismatchException("operation types do not match: %s, %s" \
                 % (self.type, tfoperation.type))
 
-        self.inputs = tuple(Tensor(sess, tftensor) for tftensor in tfoperation.inputs)
+        self.inputs = tuple(Tensor(tftensor, sess) for tftensor in tfoperation.inputs)
+
+        # store attributes as kwargs for calls to eval
+        self.kwargs = [tfoperation.get_attr(attr) for attr in (self.attrs or [])]
 
     @classmethod
-    def new(cls, sess, tfoperation):
+    def new(cls, tfoperation, sess):
         """
         Factory function that takes a tensorflow session *sess* and a tensorflow op *tfoperation*
         and returns an instance of the appropriate op class. Raises an exception of type
@@ -298,20 +336,29 @@ class Operation(object):
         if tfoperation.type not in cls.classes:
             raise UnknownOperationException("unknown operation: %s" % tfoperation.type)
 
-        return cls.classes[tfoperation.type](sess, tfoperation)
+        return cls.classes[tfoperation.type](tfoperation, sess)
 
-    def get(self, name):
+    def get(self, *names):
         """
-        Returns a tensor given by *name* using a deep lookup within this op. *None* is returned when
-        no tensor was found.
+        Returns one or more tensors given by *names* using a deep lookup within this op. *None* is
+        returned when no tensor was found.
         """
+        tensors = tuple(self._get(name) for name in names)
+        return tensors[0] if len(names) == 1 else tensors
+
+    def _get(self, name):
         return reduce(lambda t1,t2: t1 or t2.get(name), self.inputs, None)
 
     def eval(self, feed_dict, _uuid):
         """ eval(feed_dict=None)
         Returns the value of the output tensor. See :py:meth:`Tensor.eval` for more info.
         """
-        return self.func(*(t.eval(feed_dict=feed_dict, _uuid=_uuid) for t in self.inputs))
+        args = [t.eval(feed_dict=feed_dict, _uuid=_uuid) for t in self.inputs]
+        if self.unpack:
+            args.extend(self.kwargs)
+        else:
+            args = [args] + self.kwargs
+        return self.func(*args)
 
     @staticmethod
     def func():
@@ -322,16 +369,25 @@ class Operation(object):
         raise NotImplementedError
 
     @staticmethod
-    def factory(func):
+    def factory(func=None, **kwargs):
         """
         Returns a new op class whose static function will be set to *func*. The name of *func* will
         also be the op class name.
         """
-        name = func.__name__
-        classdict = {"func": staticmethod(func)}
-        Op = Operation.__metaclass__(name, (Operation,), classdict)
-        _locals[name] = Op
-        return Op
+        def wrapper(func):
+            name = func.__name__
+            classdict = {"func": staticmethod(func)}
+            classdict.update(kwargs)
+            Op = Operation.__metaclass__(name, (Operation,), classdict)
+            Op.__doc__ = func.__doc__
+            _locals[name] = Op
+            return Op
+        return wrapper if func is None else wrapper(func)
+
+
+lgamma_vec = np.vectorize(np.math.lgamma)
+erf_vec = np.vectorize(np.math.erf)
+erfc_vec = np.vectorize(np.math.erfc)
 
 
 @Operation.factory
@@ -375,11 +431,11 @@ def Div(a, b):
 
 
 @Operation.factory
-def MatMul(a, b):
+def Mod(a, b):
     """
-    Matrix multiplication op.
+    Modulo op.
     """
-    return np.dot(a, b)
+    return np.mod(a, b)
 
 
 @Operation.factory
@@ -388,6 +444,54 @@ def Cross(a, b):
     Cross product op.
     """
     return np.cross(a, b)
+
+
+@Operation.factory(unpack=False)
+def AddN(inputs):
+    """
+    Multi add op.
+    """
+    return reduce(np.add, inputs)
+
+
+@Operation.factory
+def Abs(a):
+    """
+    Abs op.
+    """
+    return np.abs(a)
+
+
+@Operation.factory
+def Neg(a):
+    """
+    Neg op.
+    """
+    return np.negative(a)
+
+
+@Operation.factory
+def Sign(a):
+    """
+    Sign op.
+    """
+    return np.sign(a)
+
+
+@Operation.factory
+def Inv(a):
+    """
+    Reciprocal op.
+    """
+    return np.reciprocal(a)
+
+
+@Operation.factory
+def Square(a):
+    """
+    Square op.
+    """
+    return np.square(a)
 
 
 @Operation.factory
@@ -399,11 +503,43 @@ def Round(a):
 
 
 @Operation.factory
-def Floor(a):
+def Sqrt(a):
     """
-    Floor round op.
+    Square root op.
     """
-    return np.floor(a)
+    return np.sqrt(a)
+
+
+@Operation.factory
+def Rsqrt(a):
+    """
+    Reciprocal square root op.
+    """
+    return np.reciprocal(np.sqrt(a))
+
+
+@Operation.factory
+def Pow(a, b):
+    """
+    Power op.
+    """
+    return np.power(a, b)
+
+
+@Operation.factory
+def Exp(a):
+    """
+    Exponential op.
+    """
+    return np.exp(a)
+
+
+@Operation.factory
+def Log(a):
+    """
+    Logarithm op.
+    """
+    return np.log(a)
 
 
 @Operation.factory
@@ -415,11 +551,207 @@ def Ceil(a):
 
 
 @Operation.factory
-def Mod(a, b):
+def Floor(a):
     """
-    Modulo op.
+    Floor round op.
     """
-    return np.mod(a, b)
+    return np.floor(a)
+
+
+@Operation.factory
+def Maximum(a, b):
+    """
+    Maximum op.
+    """
+    return np.maximum(a, b)
+
+
+@Operation.factory
+def Minimum(a, b):
+    """
+    Minimum op.
+    """
+    return np.minimum(a, b)
+
+
+@Operation.factory
+def Cos(a):
+    """
+    Cos op.
+    """
+    return np.cos(a)
+
+
+@Operation.factory
+def Sin(a):
+    """
+    Sin op.
+    """
+    return np.sin(a)
+
+
+@Operation.factory
+def Lgamma(a):
+    """
+    lgamma op.
+    """
+    return lgamma_vec(a)
+
+
+@Operation.factory
+def Erf(a):
+    """
+    Gaussian error function op.
+    """
+    return erf_vec(a)
+
+
+@Operation.factory
+def Erfc(a):
+    """
+    Complementary gaussian error function op.
+    """
+    return erfc_vec(a)
+
+
+@Operation.factory
+def Diag(a):
+    """
+    Diag op.
+    """
+    r = np.zeros(2 * a.shape)
+    for idx, v in np.ndenumerate(a):
+        r[2 * idx] = v
+    return r
+
+
+@Operation.factory
+def Transpose(a, perm=None):
+    """
+    Transpose op.
+    """
+    return np.transpose(a, axes=perm)
+
+
+@Operation.factory(attrs=("transpose_a", "transpose_b"))
+def MatMul(a, b, transpose_a, transpose_b):
+    """
+    Matrix multiplication op.
+    """
+    return np.dot(a if not transpose_a else np.transpose(a),
+                  b if not transpose_b else np.transpose(b))
+
+
+@Operation.factory(attrs=("adj_x", "adj_y"))
+def BatchMatMul(a, b, adj_a, adj_b):
+    """
+    Batched matrix multiplication op.
+    """
+    # apply adjoint op if required along last two axes
+    axes = range(len(a.shape))
+    axes.append(axes.pop(-2))
+    if adj_a:
+        a = np.conj(np.transpose(a, axes=axes))
+    if adj_b:
+        b = np.conj(np.transpose(b, axes=axes))
+    # create the target tensor
+    r = np.empty(a.shape[:-2] + (a.shape[-2], b.shape[-1]))
+    # no batched dot op in np so loop over all indexes except last two dims
+    for idx in product(*(xrange(dim) for dim in a.shape[:-2])):
+        r[idx] = np.dot(a[idx], b[idx])
+    return r
+
+
+@Operation.factory
+def MatrixDeterminant(a):
+    """
+    Matrix det op.
+    """
+    return np.linalg.det(a)
+
+
+@Operation.factory
+def BatchMatrixDeterminant(a):
+    """
+    Batched matrix det op.
+    """
+    return np.linalg.det(a)
+
+
+@Operation.factory
+def MatrixInverse(a):
+    """
+    Matrix inversion op.
+    """
+    return np.linalg.inv(a)
+
+
+@Operation.factory
+def BatchMatrixInverse(a):
+    """
+    Batched matrix inversion op.
+    """
+    return np.linalg.inv(a)
+
+
+@Operation.factory
+def Cholesky(a):
+    """
+    Cholesky decomposition op.
+    """
+    return np.linalg.cholesky(a)
+
+
+@Operation.factory
+def BatchCholesky(a):
+    """
+    Batched Cholesky decomposition op.
+    """
+    return np.linalg.cholesky(a)
+
+
+@Operation.factory
+def SelfAdjointEig(a):
+    """
+    Eigen decomp op.
+    """
+    shape = list(a.shape)
+    shape[-2] += 1
+    return np.append(*np.linalg.eig(a)).reshape(*shape)
+
+
+@Operation.factory
+def BatchSelfAdjointEig(a):
+    """
+    Batched eigen decomp op.
+    """
+    shape = list(a.shape)
+    shape[-2] += 1
+    return np.append(*np.linalg.eig(a)).reshape(*shape)
+
+
+@Operation.factory
+def MatrixSolve(a, b):
+    """
+    Matrix solve op.
+    """
+    return np.linalg.solve(a, b)
+
+
+@Operation.factory
+def BatchMatrixSolve(a, b):
+    """
+    Batched matrix solve op.
+    """
+    return np.linalg.solve(a, b)
+
+
+@Operation.factory
+def MatrixSolveLs(a, b, l2_regularizer):
+    """
+    Matrix least-squares solve op.
+    """
+    return np.linalg.lstsq(a, b)[0]
 
 
 @Operation.factory
@@ -429,3 +761,19 @@ def Softmax(a):
     """
     e = np.exp(a)
     return np.divide(e, np.sum(e, axis=-1, keepdims=True))
+
+
+@Operation.factory
+def Rank(a):
+    """
+    Rank op.
+    """
+    return len(a.shape)
+
+
+@Operation.factory
+def Range(start, limit, delta):
+    """
+    Range op.
+    """
+    return np.arange(start, limit, delta)

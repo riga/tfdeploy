@@ -44,8 +44,7 @@ class CoreTestCase(TestCase):
 
     def test_eval(self):
         m = self.simple_model
-        inp = m.get("input")
-        outp = m.get("output")
+        inp, outp = m.get("input", "output")
 
         # create an input batch
         examples = np.random.rand(1000, 10).astype("float32")

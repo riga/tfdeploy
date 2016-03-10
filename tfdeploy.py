@@ -770,6 +770,46 @@ def MatrixSolveLs(a, b, l2_regularizer):
 
 
 @Operation.factory
+def Complex(a, b):
+    """
+    Complex number op.
+    """
+    return np.add(a, np.multiply(b, 1j))
+
+
+@Operation.factory
+def ComplexAbs(a):
+    """
+    Complex number length op.
+    """
+    return np.abs(a)
+
+
+@Operation.factory
+def Conj(a):
+    """
+    Complex conjugate op.
+    """
+    return np.conj(a)
+
+
+@Operation.factory
+def Imag(a):
+    """
+    Complex imag op.
+    """
+    return np.imag(a)
+
+
+@Operation.factory
+def Real(a):
+    """
+    Complex real op.
+    """
+    return np.real(a)
+
+
+@Operation.factory
 def Softmax(a):
     """
     Softmax op.

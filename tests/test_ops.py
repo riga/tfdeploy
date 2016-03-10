@@ -18,20 +18,6 @@ class OpsTestCase(TestCase):
 
         self.ndigits = 7
 
-        # self.a = np.arange(20).reshape((4, 5))
-        # self.b = np.arange(20, 40).reshape((4, 5))
-        # self.c = np.arange(20, 30).reshape((5, 2))
-        # self.d = np.arange(20, 30, 0.1).reshape(50, 2)
-        # self.e = np.arange(12).reshape((4, 3))
-        # self.f = np.arange(12, 24).reshape((4, 3))
-        # self.g = np.arange(-10, 10).reshape((4, 5))
-        # self.h = np.arange(1, 10).reshape((3, 3))
-        # self.i = np.arange(24).reshape((2, 2, 2, 3))
-        # self.j = np.arange(24).reshape((2, 3, 2, 2))
-        # self.k = np.array([8, 3, 3, 8]).reshape(2, 2)
-        # self.l = np.array(3 * [8, 3, 3, 8]).reshape(3, 2, 2)
-        # self.n = 3.5
-
     def check(self, t, ndigits=None, stats=False, deb=False):
         rtf = t.eval(session=self.sess)
         rtd = td.Tensor(t, self.sess).eval()
@@ -53,11 +39,14 @@ class OpsTestCase(TestCase):
         else:
             self.assertEqual(rtf, rtd)
 
-    def random(self, *shapes):
+    def random(self, *shapes, **kwargs):
         if all(isinstance(i, int) for i in shapes):
-            shapes = [shapes]
-        arrays = tuple(np.random.rand(*shape) for shape in shapes)
-        return arrays[0] if len(shapes) == 1 else arrays
+            if kwargs.get("complex", False):
+                return self.random(*shapes) + 1j * self.random(*shapes)
+            else:
+                return np.random.rand(*shapes)
+        else:
+            return tuple(self.random(*shape) for shape in shapes)
 
     def test_Identity(self):
         t = tf.identity(self.random(3, 4))
@@ -233,6 +222,26 @@ class OpsTestCase(TestCase):
 
     def test_MatrixSolveLs(self):
         t = tf.matrix_solve_ls(*self.random((3, 3), (3, 1)))
+        self.check(t)
+
+    def test_Complex(self):
+        t = tf.complex(*self.random((3, 4), (3, 4)))
+        self.check(t)
+
+    def test_ComplexAbs(self):
+        t = tf.complex_abs(self.random(3, 4, complex=True))
+        self.check(t)
+
+    def test_Conj(self):
+        t = tf.conj(self.random(3, 4, complex=True))
+        self.check(t)
+
+    def test_Imag(self):
+        t = tf.imag(self.random(3, 4, complex=True))
+        self.check(t)
+
+    def test_Real(self):
+        t = tf.real(self.random(3, 4, complex=True))
         self.check(t)
 
     def test_Softmax(self):

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+import os
 import numpy as np
 from base import TestCase, tfdeploy as td
 import tensorflow as tf
@@ -9,29 +10,45 @@ import tensorflow as tf
 __all__ = ["OpsTestCase"]
 
 
+# get device from env
+CPU, GPU = tuple(range(2))
+DEVICE = CPU
+if os.environ.get("TD_TEST_GPU", "").lower() in ("1", "yes", "true"):
+    DEVICE = GPU
+DEVICE_ID = "/%s:0" % ["cpu", "gpu"][DEVICE]
+
+
 class OpsTestCase(TestCase):
 
     def __init__(self, *args, **kwargs):
         super(OpsTestCase, self).__init__(*args, **kwargs)
 
+        # add the device to the "_device_function_stack" of the default graph
+        dev = tf.python.framework.device.merge_device(DEVICE_ID)
+        tf.get_default_graph()._device_function_stack.append(dev)
+
+        # create a tf session
         self.sess = tf.Session()
 
         self.ndigits = 7
 
-    def check(self, t, ndigits=None, stats=False, deb=False):
+    def check(self, t, ndigits=None, stats=False, abs=False, debug=False):
         rtf = t.eval(session=self.sess)
         rtd = td.Tensor(t, self.sess).eval()
 
         if ndigits is None:
             ndigits = self.ndigits
 
-        if deb:
+        if debug:
             import pdb; pdb.set_trace()
 
         if isinstance(rtf, np.ndarray):
             if not stats:
                 self.assertTrue(np.allclose(rtf, rtd))
             else:
+                if abs:
+                    rtf = np.abs(rtf)
+                    rtd = np.abs(rtd)
                 self.assertEqual(round(rtf.sum(), ndigits), round(rtd.sum(), ndigits))
                 self.assertEqual(round(rtf.mean(), ndigits), round(rtd.mean(), ndigits))
         elif isinstance(rtf, float):

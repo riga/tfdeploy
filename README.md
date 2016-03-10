@@ -124,32 +124,18 @@ model.save("model.pkl")
 
 ## Performance
 
-tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal operations are nearly overhead-free. All mathematical operations use numpy vectorization. On average, evaluation is *70%* faster than plain tensorflow. (tba: test with large-scale network)
+tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal operations are nearly overhead-free. All mathematical operations use numpy vectorization.
 
-##### Test code (based on ["Convert your graph"](#convert-your-graph))
-
-```python
-batch = np.random.rand(10000, 784)
-
-def test_tf():
-    return y.eval(session=sess, feed_dict={x: batch})
-    
-x2, y2 = model.get("input", "output")
-def test_td():
-    return y2.eval({x2: batch})
-```
-
-ipython shell:
+iPython shell:
 
 ```bash
-In [1]: %timeit test_tf()
-100 loops, best of 3: 8.78 ms per loop
+> ipython -i tests/perf.py
 
-In [2]: %timeit test_td()
-100 loops, best of 3: 2.63 ms per loop
+In [1]: %timeit -n100 test_tf()
+100 loops, best of 3: 109 ms per loop
 
-In [3]: 2.63/8.78
-Out[3]: 0.2995444191343964
+In [2]: %timeit -n100 test_td()
+100 loops, best of 3: 60.5 ms per loop
 ```
 
 

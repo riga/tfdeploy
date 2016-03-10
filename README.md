@@ -7,6 +7,9 @@ Deploy [tensorflow](https://www.tensorflow.org) graphs for *insanely-fast* evalu
 ##### Evaluation usage
 
 ```python
+import tfdeploy as td
+import numpy as np
+
 model = tfdeploy.Model("/path/to/model.pkl")
 inp, outp = mode.get("input", "output")
 

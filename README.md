@@ -92,7 +92,7 @@ result = y.eval({x: batch})
 
 ##### Write your own ``Operation``
 
-tfdeploy supports most of the ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom ops, you might want to extend tfdeploy:
+tfdeploy supports ~~most of the~~ all math ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html) (nn Ops are currently added). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom ops, you might want to extend tfdeploy:
 
 ```python
 import tensorflow as tf

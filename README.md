@@ -117,7 +117,7 @@ def InvertedSoftmax(a):
 
 # now, we're good to go
 model = td.Model()
-model.add(y)
+model.add(y, sess)
 model.save("model.pkl")
 ```
 

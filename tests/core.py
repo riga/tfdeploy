@@ -20,11 +20,11 @@ class CoreTestCase(TestCase):
         m = self.simple_model
 
         # model has one root tensor ...
-        self.assertEqual(len(m.root), 1)
+        self.assertEqual(len(m.roots), 1)
 
         # ... which is named "output" and can be retrieved via get
         outp = m.get("output")
-        self.assertIn(outp, m.root)
+        self.assertIn(outp, m.roots.values())
 
         # the input tensor is named "input"
         self.assertIsNotNone(m.get("input"))

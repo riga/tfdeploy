@@ -53,10 +53,10 @@ class Model(object):
        model.add(y, sess)
        model.save("model.pkl")
 
-    .. py:attribute:: root
-       type: set
+    .. py:attribute:: roots
+       type: dict
 
-       The set of all contained root tensors.
+       Contained root tensors mapped to a key.
     """
 
     value_index_cre = re.compile("\:\d+$")
@@ -65,22 +65,22 @@ class Model(object):
     def __init__(self, path=None):
         super(Model, self).__init__()
 
-        self.root = set()
+        self.roots = {}
 
         # load when desired
         if path is not None:
             self.load(path)
 
-    def get(self, *names):
+    def get(self, *names, **kwargs):
+        """ get(*names, key=None)
+        Returns one or more tensors given by *names* using a deep lookup within the model. If *key*
+        is not *None*, Only the root tensor with that *key* is traversed. *None* is returned when no
+        tensor was found. In case a tensor is passed, it's name is used for the lookup.
         """
-        Returns one or more tensors given by *names* using a deep lookup within the model. *None* is
-        returned when no tensor was found. In case a tensor is passed, it's name is used for the
-        lookup.
-        """
-        tensors = tuple(self._get(name) for name in names)
+        tensors = tuple(self._get(name, **kwargs) for name in names)
         return tensors[0] if len(names) == 1 else tensors
 
-    def _get(self, name):
+    def _get(self, name, key=None):
         if isinstance(name, Tensor):
             name = name.name
 
@@ -89,7 +89,10 @@ class Model(object):
             name += ":%d" % self.default_value_index
 
         # return the first occurance of a tensor with that name
-        return reduce(lambda t1,t2: t1 or t2.get(name), self.root, None)
+        if key is not None:
+            return self.roots[key].get(name)
+        else:
+            return reduce(lambda t1, t2: t1 or t2.get(name), self.roots.values(), None)
 
     def __getitem__(self, name):
         return self.get(name)
@@ -97,16 +100,22 @@ class Model(object):
     def __contains__(self, name):
         return self.get(name) is not None
 
-    def add(self, tensor, sess=None):
+    def add(self, tensor, tfsess=None, key=None):
         """
-        Adds a new *tensor* to the root set. When *tensor* is not an instance of :py:class:`Tensor`
-        but an instance of ``tensorflow.Tensor``, it is converted first. In that case, *sess* should
-        be a valid tensorflow session.
+        Adds a new root *tensor* for a *key* which, if *None*, defaults to a consecutive number.
+        When *tensor* is not an instance of :py:class:`Tensor` but an instance of
+        ``tensorflow.Tensor``, it is converted first. In that case, *tfsess* should be a valid
+        tensorflow session.
         """
         if not isinstance(tensor, Tensor):
-            tensor = Tensor(tensor, sess)
+            tensor = Tensor(tensor, tfsess)
 
-        self.root.add(tensor)
+        if key is None:
+            key = len(self.roots)
+            while key in self.roots:
+                key += 1
+
+        self.roots[key] = tensor
 
     def load(self, path):
         """
@@ -114,9 +123,10 @@ class Model(object):
         """
         path = os.path.expandvars(os.path.expanduser(path))
         with open(path, "r") as f:
-            tensors = cPickle.load(f)
-        for t in tensors:
-            self.add(t)
+            roots = cPickle.load(f)
+
+        for key, tensor in roots.items():
+            self.add(tensor, key=key)
 
     def save(self, path):
         """
@@ -124,7 +134,7 @@ class Model(object):
         """
         path = os.path.expandvars(os.path.expanduser(path))
         with open(path, "w") as f:
-            cPickle.dump(self.root, f)
+            cPickle.dump(self.roots, f)
 
 
 class TensorRegister(type):
@@ -135,10 +145,10 @@ class TensorRegister(type):
 
     instances = {}
 
-    def __call__(cls, tftensor, sess):
+    def __call__(cls, tftensor, tfsess):
         # simply caching
         if tftensor not in cls.instances:
-            cls.instances[tftensor] = super(TensorRegister, cls).__call__(tftensor, sess)
+            cls.instances[tftensor] = super(TensorRegister, cls).__call__(tftensor, tfsess)
         return cls.instances[tftensor]
 
 
@@ -167,11 +177,11 @@ class Tensor(object):
 
     __metaclass__ = TensorRegister
 
-    def __init__(self, tftensor, sess):
+    def __init__(self, tftensor, tfsess):
         super(Tensor, self).__init__()
 
-        if not sess:
-            raise ValueError("bad tensorflow session: %s" % sess)
+        if not tfsess:
+            raise ValueError("bad tensorflow session: %s" % tfsess)
 
         self.name = tftensor.name
         self.op = None
@@ -181,9 +191,9 @@ class Tensor(object):
         # no op for variables, placeholders and constants
         # explicit value for variables and constants
         if tftensor.op.type in ("Variable", "Const"):
-            self.value = tftensor.eval(session=sess)
+            self.value = tftensor.eval(session=tfsess)
         elif tftensor.op.type != "Placeholder":
-            self.op = Operation.new(tftensor.op, sess)
+            self.op = Operation.new(tftensor.op, tfsess)
 
     def get(self, *names):
         """
@@ -253,11 +263,11 @@ class OperationRegister(type):
             metacls.classes[type] = cls
         return cls
 
-    def __call__(cls, tfoperation, sess):
+    def __call__(cls, tfop, tfsess):
         # simply caching
-        if tfoperation not in cls.instances:
-            cls.instances[tfoperation] = super(OperationRegister, cls).__call__(tfoperation, sess)
-        return cls.instances[tfoperation]
+        if tfop not in cls.instances:
+            cls.instances[tfop] = super(OperationRegister, cls).__call__(tfop, tfsess)
+        return cls.instances[tfop]
 
 
 class UnknownOperationException(Exception):
@@ -320,31 +330,31 @@ class Operation(object):
     unpack = True
     attrs = tuple()
 
-    def __init__(self, tfoperation, sess):
+    def __init__(self, tfop, tfsess):
         super(Operation, self).__init__()
 
         # compare types as a cross check
-        if tfoperation.type not in self.types:
+        if tfop.type not in self.types:
             raise OperationMismatchException("operation types do not match: %s, %s" \
-                % (self.types, tfoperation.type))
+                % (self.types, tfop.type))
 
-        self.name = tfoperation.name
-        self.inputs = tuple(Tensor(tftensor, sess) for tftensor in tfoperation.inputs)
+        self.name = tfop.name
+        self.inputs = tuple(Tensor(tftensor, tfsess) for tftensor in tfop.inputs)
 
         # store attributes as kwargs for calls to eval
-        self.kwargs = [tfoperation.get_attr(attr) for attr in (self.attrs or [])]
+        self.kwargs = [tfop.get_attr(attr) for attr in (self.attrs or [])]
 
     @classmethod
-    def new(cls, tfoperation, sess):
+    def new(cls, tfop, tfsess):
         """
-        Factory function that takes a tensorflow session *sess* and a tensorflow op *tfoperation*
+        Factory function that takes a tensorflow session *tfsess* and a tensorflow op *tfop*
         and returns an instance of the appropriate op class. Raises an exception of type
         :py:exc:`UnknownOperationException` in case the requested op type is not known.
         """
-        if tfoperation.type not in cls.classes:
-            raise UnknownOperationException("unknown operation: %s" % tfoperation.type)
+        if tfop.type not in cls.classes:
+            raise UnknownOperationException("unknown operation: %s" % tfop.type)
 
-        return cls.classes[tfoperation.type](tfoperation, sess)
+        return cls.classes[tfop.type](tfop, tfsess)
 
     def set_attr(self, attr, value):
         """

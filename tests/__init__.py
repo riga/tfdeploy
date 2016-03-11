@@ -1,4 +1,4 @@
 # -*- coding: utf-8 -*-
 
-from test_core import *
-from test_ops import *
+from core import *
+from ops import *

@@ -969,7 +969,41 @@ def ArgMax(a, dim):
     """
     Argmax op.
     """
-    return (np.argmax(a, axis=dim),)
+    return np.argmax(a, axis=dim),
+
+
+@Operation.factory
+def ListDiff(a, b):
+    """
+    List diff op.
+    """
+    d = np.setdiff1d(a, b)
+    return d, np.searchsorted(a, d)
+
+
+@Operation.factory
+def Where(a):
+    """
+    Boolean where op.
+    """
+    return np.argwhere(a),
+
+
+@Operation.factory
+def Unique(a):
+    """
+    Unique op.
+    """
+    _, idxs, inv = np.unique(a, return_index=True, return_inverse=True)
+    return a[np.sort(idxs)], idxs[inv]
+
+
+@Operation.factory
+def InvertPermutation(a):
+    """
+    Invert perm op.
+    """
+    return np.argsort(a),
 
 
 @Operation.factory

@@ -337,6 +337,33 @@ class OpsTestCase(TestCase):
         t = tf.sparse_segment_sqrt_n(self.random(4, 3, 2), [0, 2, 3], [0, 1, 1])
         self.check(t)
 
+    def test_ArgMin(self):
+        t = tf.argmin(self.random(3, 4, 2), 1)
+        self.check(t)
+
+    def test_ArgMax(self):
+        t = tf.argmax(self.random(3, 4, 2), 1)
+        self.check(t)
+
+    def test_ListDiff(self):
+        l = np.random.randint(0, 5, 100)
+        t1, t2 = tf.listdiff(l, l[::-2])
+        self.check(t1)
+        self.check(t2)
+
+    def test_Where(self):
+        t = tf.where([[True, False], [False, False], [True, False]])
+        self.check(t)
+
+    def test_Unique(self):
+        t1, t2 = tf.unique([9, 3, 5, 7, 3, 9, 9])
+        self.check(t1)
+        self.check(t2)
+
+    def test_InvertPermutation(self):
+        t = tf.invert_permutation(np.random.permutation(10))
+        self.check(t)
+
     def test_Softmax(self):
         t = tf.nn.softmax(self.random(10, 5))
         self.check(t)

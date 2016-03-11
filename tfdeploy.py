@@ -23,6 +23,7 @@ import cPickle
 from uuid import uuid4
 from functools import reduce
 from itertools import product
+from collections import defaultdict
 import numpy as np
 
 
@@ -646,7 +647,7 @@ def Diag(a):
     """
     Diag op.
     """
-    r = np.zeros(2 * a.shape)
+    r = np.zeros(2 * a.shape, dtype=a.dtype)
     for idx, v in np.ndenumerate(a):
         r[2 * idx] = v
     return r
@@ -849,6 +850,86 @@ def Any(a, reduction_indices, keep_dims):
     Any reduction op.
     """
     return np.any(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+
+
+def seg_map(func, a, ids):
+    m = defaultdict(list)
+    for i, e in enumerate(ids):
+        m[e].append(i)
+    r = np.empty((len(m),) + a.shape[1:], dtype=a.dtype)
+    for i, idxs in m.items():
+        r[i] = func(idxs)
+    return r
+
+
+@Operation.factory(types=("SegmentSum", "UnsortedSegmentSum"))
+def SegmentSum(a, ids, *args):
+    """
+    Segmented sum op.
+    """
+    func = lambda idxs: reduce(np.add, a[idxs])
+    return seg_map(func, a, ids)
+
+
+@Operation.factory
+def SegmentProd(a, ids):
+    """
+    Segmented prod op.
+    """
+    func = lambda idxs: reduce(np.multiply, a[idxs])
+    return seg_map(func, a, ids)
+
+
+@Operation.factory
+def SegmentMin(a, ids):
+    """
+    Segmented min op.
+    """
+    func = lambda idxs: np.amin(a[idxs], axis=0)
+    return seg_map(func, a, ids)
+
+
+@Operation.factory
+def SegmentMax(a, ids):
+    """
+    Segmented max op.
+    """
+    func = lambda idxs: np.amax(a[idxs], axis=0)
+    return seg_map(func, a, ids)
+
+
+@Operation.factory
+def SegmentMean(a, ids):
+    """
+    Segmented mean op.
+    """
+    func = lambda idxs: np.mean(a[idxs], axis=0)
+    return seg_map(func, a, ids)
+
+
+@Operation.factory
+def SparseSegmentSum(a, idxs, ids):
+    """
+    Sparse segmented sum op.
+    """
+    return SegmentSum.func(a[idxs], ids)
+
+
+@Operation.factory
+def SparseSegmentMean(a, idxs, ids):
+    """
+    Sparse segmented mean op.
+    """
+    return SegmentMean.func(a[idxs], ids)
+
+
+@Operation.factory
+def SparseSegmentSqrtN(a, idxs, ids):
+    """
+    Sparse segmented sum / sqrt(n=len(idxs)) op.
+    """
+    func = lambda _idxs: np.divide(reduce(np.add, a[idxs][_idxs]), np.math.sqrt(len(_idxs)))
+    return seg_map(func, a, ids)
 
 
 @Operation.factory

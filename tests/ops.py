@@ -301,6 +301,42 @@ class OpsTestCase(TestCase):
         t = tf.reduce_any(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
 
+    def test_SegmentSum(self):
+        t = tf.segment_sum(self.random(4, 2, 3), np.array([0, 1, 1, 2]))
+        self.check(t)
+
+    def test_SegmentProd(self):
+        t = tf.segment_prod(self.random(4, 2, 3), np.array([0, 1, 1, 2]))
+        self.check(t)
+
+    def test_SegmentMin(self):
+        t = tf.segment_min(self.random(4, 2, 3), np.array([0, 1, 1, 2]))
+        self.check(t)
+
+    def test_SegmentMax(self):
+        t = tf.segment_max(self.random(4, 2, 3), np.array([0, 1, 1, 2]))
+        self.check(t)
+
+    def test_SegmentMean(self):
+        t = tf.segment_mean(self.random(4, 2, 3), np.array([0, 1, 1, 2]))
+        self.check(t)
+
+    def test_UnsortedSegmentSum(self):
+        t = tf.unsorted_segment_sum(self.random(4, 2, 3), np.array([0, 2, 2, 1]), 3)
+        self.check(t)
+
+    def test_SparseSegmentSum(self):
+        t = tf.sparse_segment_sum(self.random(4, 3, 2), [0, 2, 3], [0, 1, 1])
+        self.check(t)
+
+    def test_SparseSegmentMean(self):
+        t = tf.sparse_segment_mean(self.random(4, 3, 2), [0, 2, 3], [0, 1, 1])
+        self.check(t)
+
+    def test_SparseSegmentSqrtN(self):
+        t = tf.sparse_segment_sqrt_n(self.random(4, 3, 2), [0, 2, 3], [0, 1, 1])
+        self.check(t)
+
     def test_Softmax(self):
         t = tf.nn.softmax(self.random(10, 5))
         self.check(t)

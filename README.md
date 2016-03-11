@@ -42,6 +42,7 @@ To boil it down, tfdeploy
 - **does not need tensorflow** during evaluation.
 - only depends on numpy.
 - can load one or more models from a single file.
+- does not support GPUs.
 
 
 ## How?

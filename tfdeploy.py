@@ -350,6 +350,9 @@ class Operation(object):
         self.name = tfop.name
         self.inputs = tuple(Tensor(tftensor, tfsess) for tftensor in tfop.inputs)
 
+        self.value = None
+        self.last_uuid = None
+
         # store attributes as kwargs for calls to eval
         self.kwargs = [tfop.get_attr(attr) for attr in (self.attrs or [])]
 
@@ -385,16 +388,29 @@ class Operation(object):
     def _get(self, name):
         return reduce(lambda t1,t2: t1 or t2.get(name), self.inputs, None)
 
-    def eval(self, feed_dict, _uuid):
-        """ eval(feed_dict=None)
+    def eval(self, feed_dict, _uuid=None):
+        """ eval(feed_dict)
         Returns the value of the output tensor. See :py:meth:`Tensor.eval` for more info.
         """
+        # set a cache uuid for this eval call
+        if _uuid is None:
+            _uuid = uuid4()
+
+        # already cached?
+        if _uuid == self.last_uuid:
+            return self.value
+        else:
+            self.last_uuid = _uuid
+
         args = [t.eval(feed_dict=feed_dict, _uuid=_uuid) for t in self.inputs]
         if self.unpack:
             args.extend(self.kwargs)
         else:
             args = [args] + self.kwargs
-        return self.func(*args)
+
+        self.value = self.func(*args)
+
+        return self.value
 
     @staticmethod
     def func():

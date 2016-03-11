@@ -10,10 +10,10 @@ Deploy [tensorflow](https://www.tensorflow.org) graphs for *faster* evaluation a
 import tfdeploy as td
 import numpy as np
 
-model = tfdeploy.Model("/path/to/model.pkl")
+model = td.Model("/path/to/model.pkl")
 inp, outp = mode.get("input", "output")
 
-batch = numpy.random.rand(10000, 784)
+batch = np.random.rand(10000, 784)
 result = outp.eval({inp: batch})
 ```
 

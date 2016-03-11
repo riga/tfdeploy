@@ -6,5 +6,3 @@
 *.pkl
 dist
 MANIFEST
-README.rst
-deploy.sh

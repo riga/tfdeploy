@@ -2,14 +2,19 @@
 
 
 import os
+from subprocess import Popen, PIPE
 from distutils.core import setup
 import tfdeploy as td
 
 
-readme = "README.rst"
+readme = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md")
 if os.path.isfile(readme):
-    with open(readme) as f:
-        long_description = f.read()
+    cmd = "pandoc --from=markdown --to=rst " + readme
+    p = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True, executable="/bin/bash")
+    out, err = p.communicate()
+    if p.returncode != 0:
+        raise Exception("pandoc conversion failed: " + err)
+    long_description = out
 else:
     long_description = ""
 

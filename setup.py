@@ -19,7 +19,8 @@ else:
     long_description = ""
 
 keywords = [
-    "tensorflow", "export", "dump", "numpy", "model", "predict", "evaluate"
+    "tensorflow", "deploy", "export", "dump", "numpy", "model", "predict", "evaluate", "function",
+    "method"
 ]
 
 classifiers = [

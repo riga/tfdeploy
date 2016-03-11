@@ -163,6 +163,11 @@ class Tensor(object):
 
        The name of the tensor.
 
+    .. py:attribute:: value_index
+       type: int
+
+       The value index of this tensor, i.e., the position in the op's output list.
+
     .. py:attribute:: op
        type: None, Operation
 
@@ -185,6 +190,7 @@ class Tensor(object):
             raise ValueError("bad tensorflow session: %s" % tfsess)
 
         self.name = tftensor.name
+        self.value_index = tftensor.value_index
         self.op = None
         self.value = None
         self.last_uuid = None
@@ -237,7 +243,7 @@ class Tensor(object):
         if self in feed_dict:
             self.value = feed_dict[self]
         elif self.op is not None:
-            self.value = self.op.eval(feed_dict, _uuid)
+            self.value = self.op.eval(feed_dict, _uuid)[self.value_index]
 
         return self.value
 
@@ -297,6 +303,19 @@ class Operation(object):
 
        The types of tensorflow ops that this op can represent.
 
+    .. py:attribute:: unpack
+       type: bool
+       classmember
+
+       If *True* (default), the values of evaluated input tensors are forwarded to *func* as single
+       arguments, or, otherwise, as a list.
+
+    .. py:attribute:: attrs
+       type: tuple
+       classmember
+
+       Names of the configuration attributes of the original tensorflow op.
+
     .. py:attribute:: name
        type: string
 
@@ -307,17 +326,6 @@ class Operation(object):
 
        Tensors that are input to this op. Their order is important as they are forwarded to *func*
        for evaluation.
-
-    .. py:attribute:: unpack
-       type: bool
-
-       If *True* (default), the values of evaluated input tensors are forwarded to *func* as single
-       arguments, or, otherwise, as a list.
-
-    .. py:attribute:: attrs
-       type: tuple
-
-       Names of the configuration attributes of the original tensorflow op.
 
     .. py:attribute:: kwargs
        type: list
@@ -392,7 +400,7 @@ class Operation(object):
     def func():
         """ func(*args)
         The actual op logic. Must be implemented in inheriting classes. All input tensors are
-        forwarded to this method for evaluation.
+        forwarded to this method for evaluation. Should return a tuple.
         """
         raise NotImplementedError
 
@@ -423,7 +431,7 @@ def Identity(a):
     """
     Identity op.
     """
-    return a
+    return (a,)
 
 
 @Operation.factory
@@ -431,7 +439,7 @@ def Add(a, b):
     """
     Addition op.
     """
-    return np.add(a, b)
+    return (np.add(a, b),)
 
 
 @Operation.factory
@@ -439,7 +447,7 @@ def Sub(a, b):
     """
     Subtraction op.
     """
-    return np.subtract(a, b)
+    return (np.subtract(a, b),)
 
 
 @Operation.factory
@@ -447,7 +455,7 @@ def Mul(a, b):
     """
     Multiplication op.
     """
-    return np.multiply(a, b)
+    return (np.multiply(a, b),)
 
 
 @Operation.factory
@@ -455,7 +463,7 @@ def Div(a, b):
     """
     Division op.
     """
-    return np.divide(a, b)
+    return (np.divide(a, b),)
 
 
 @Operation.factory
@@ -463,7 +471,7 @@ def Mod(a, b):
     """
     Modulo op.
     """
-    return np.mod(a, b)
+    return (np.mod(a, b),)
 
 
 @Operation.factory
@@ -471,7 +479,7 @@ def Cross(a, b):
     """
     Cross product op.
     """
-    return np.cross(a, b)
+    return (np.cross(a, b),)
 
 
 @Operation.factory(unpack=False)
@@ -479,7 +487,7 @@ def AddN(inputs):
     """
     Multi add op.
     """
-    return reduce(np.add, inputs)
+    return (reduce(np.add, inputs),)
 
 
 @Operation.factory
@@ -487,7 +495,7 @@ def Abs(a):
     """
     Abs op.
     """
-    return np.abs(a)
+    return (np.abs(a),)
 
 
 @Operation.factory
@@ -495,7 +503,7 @@ def Neg(a):
     """
     Neg op.
     """
-    return np.negative(a)
+    return (np.negative(a),)
 
 
 @Operation.factory
@@ -503,7 +511,7 @@ def Sign(a):
     """
     Sign op.
     """
-    return np.sign(a)
+    return (np.sign(a),)
 
 
 @Operation.factory
@@ -511,7 +519,7 @@ def Inv(a):
     """
     Reciprocal op.
     """
-    return np.reciprocal(a)
+    return (np.reciprocal(a),)
 
 
 @Operation.factory
@@ -519,7 +527,7 @@ def Square(a):
     """
     Square op.
     """
-    return np.square(a)
+    return (np.square(a),)
 
 
 @Operation.factory
@@ -527,7 +535,7 @@ def Round(a):
     """
     Round op.
     """
-    return np.round(a)
+    return (np.round(a),)
 
 
 @Operation.factory
@@ -535,7 +543,7 @@ def Sqrt(a):
     """
     Square root op.
     """
-    return np.sqrt(a)
+    return (np.sqrt(a),)
 
 
 @Operation.factory
@@ -543,7 +551,7 @@ def Rsqrt(a):
     """
     Reciprocal square root op.
     """
-    return np.reciprocal(np.sqrt(a))
+    return (np.reciprocal(np.sqrt(a)),)
 
 
 @Operation.factory
@@ -551,7 +559,7 @@ def Pow(a, b):
     """
     Power op.
     """
-    return np.power(a, b)
+    return (np.power(a, b),)
 
 
 @Operation.factory
@@ -559,7 +567,7 @@ def Exp(a):
     """
     Exponential op.
     """
-    return np.exp(a)
+    return (np.exp(a),)
 
 
 @Operation.factory
@@ -567,7 +575,7 @@ def Log(a):
     """
     Logarithm op.
     """
-    return np.log(a)
+    return (np.log(a),)
 
 
 @Operation.factory
@@ -575,7 +583,7 @@ def Ceil(a):
     """
     Ceil round op.
     """
-    return np.ceil(a)
+    return (np.ceil(a),)
 
 
 @Operation.factory
@@ -583,7 +591,7 @@ def Floor(a):
     """
     Floor round op.
     """
-    return np.floor(a)
+    return (np.floor(a),)
 
 
 @Operation.factory
@@ -591,7 +599,7 @@ def Maximum(a, b):
     """
     Maximum op.
     """
-    return np.maximum(a, b)
+    return (np.maximum(a, b),)
 
 
 @Operation.factory
@@ -599,7 +607,7 @@ def Minimum(a, b):
     """
     Minimum op.
     """
-    return np.minimum(a, b)
+    return (np.minimum(a, b),)
 
 
 @Operation.factory
@@ -607,7 +615,7 @@ def Cos(a):
     """
     Cos op.
     """
-    return np.cos(a)
+    return (np.cos(a),)
 
 
 @Operation.factory
@@ -615,7 +623,7 @@ def Sin(a):
     """
     Sin op.
     """
-    return np.sin(a)
+    return (np.sin(a),)
 
 
 @Operation.factory
@@ -623,7 +631,7 @@ def Lgamma(a):
     """
     lgamma op.
     """
-    return lgamma_vec(a)
+    return (lgamma_vec(a),)
 
 
 @Operation.factory
@@ -631,7 +639,7 @@ def Erf(a):
     """
     Gaussian error function op.
     """
-    return erf_vec(a)
+    return (erf_vec(a),)
 
 
 @Operation.factory
@@ -639,7 +647,7 @@ def Erfc(a):
     """
     Complementary gaussian error function op.
     """
-    return erfc_vec(a)
+    return (erfc_vec(a),)
 
 
 @Operation.factory
@@ -650,7 +658,7 @@ def Diag(a):
     r = np.zeros(2 * a.shape, dtype=a.dtype)
     for idx, v in np.ndenumerate(a):
         r[2 * idx] = v
-    return r
+    return (r,)
 
 
 @Operation.factory
@@ -658,7 +666,7 @@ def Transpose(a, perm=None):
     """
     Transpose op.
     """
-    return np.transpose(a, axes=perm)
+    return (np.transpose(a, axes=perm),)
 
 
 @Operation.factory(attrs=("transpose_a", "transpose_b"))
@@ -666,8 +674,8 @@ def MatMul(a, b, transpose_a, transpose_b):
     """
     Matrix multiplication op.
     """
-    return np.dot(a if not transpose_a else np.transpose(a),
-                  b if not transpose_b else np.transpose(b))
+    return (np.dot(a if not transpose_a else np.transpose(a),
+                   b if not transpose_b else np.transpose(b)),)
 
 
 @Operation.factory(attrs=("adj_x", "adj_y"))
@@ -687,7 +695,7 @@ def BatchMatMul(a, b, adj_a, adj_b):
     # no batched dot op in np so loop over all indexes except last two dims
     for idx in product(*(xrange(dim) for dim in a.shape[:-2])):
         r[idx] = np.dot(a[idx], b[idx])
-    return r
+    return (r,)
 
 
 @Operation.factory(types=("MatrixDeterminant", "BatchMatrixDeterminant"))
@@ -695,7 +703,7 @@ def MatrixDeterminant(a):
     """
     Matrix det op.
     """
-    return np.linalg.det(a)
+    return (np.linalg.det(a),)
 
 
 @Operation.factory(types=("MatrixInverse", "BatchMatrixInverse"))
@@ -703,7 +711,7 @@ def MatrixInverse(a):
     """
     Matrix inversion op.
     """
-    return np.linalg.inv(a)
+    return (np.linalg.inv(a),)
 
 
 @Operation.factory(types=("Cholesky", "BatchCholesky"))
@@ -711,7 +719,7 @@ def Cholesky(a):
     """
     Cholesky decomposition op.
     """
-    return np.linalg.cholesky(a)
+    return (np.linalg.cholesky(a),)
 
 
 @Operation.factory(types=("SelfAdjointEig", "BatchSelfAdjointEig"))
@@ -721,7 +729,7 @@ def SelfAdjointEig(a):
     """
     shape = list(a.shape)
     shape[-2] += 1
-    return np.append(*np.linalg.eig(a)).reshape(*shape)
+    return (np.append(*np.linalg.eig(a)).reshape(*shape),)
 
 
 @Operation.factory(types=("MatrixSolve", "BatchMatrixSolve"))
@@ -729,7 +737,7 @@ def MatrixSolve(a, b):
     """
     Matrix solve op.
     """
-    return np.linalg.solve(a, b)
+    return (np.linalg.solve(a, b),)
 
 
 @Operation.factory
@@ -737,7 +745,7 @@ def MatrixSolveLs(a, b, l2_regularizer):
     """
     Matrix least-squares solve op.
     """
-    return np.linalg.lstsq(a, b)[0]
+    return (np.linalg.lstsq(a, b)[0],)
 
 
 @Operation.factory
@@ -745,7 +753,7 @@ def Complex(a, b):
     """
     Complex number op.
     """
-    return np.add(a, np.multiply(b, 1j))
+    return (np.add(a, np.multiply(b, 1j)),)
 
 
 @Operation.factory
@@ -753,7 +761,7 @@ def ComplexAbs(a):
     """
     Complex number length op.
     """
-    return np.abs(a)
+    return (np.abs(a),)
 
 
 @Operation.factory
@@ -761,7 +769,7 @@ def Conj(a):
     """
     Complex conjugate op.
     """
-    return np.conj(a)
+    return (np.conj(a),)
 
 
 @Operation.factory
@@ -769,7 +777,7 @@ def Imag(a):
     """
     Complex imag op.
     """
-    return np.imag(a)
+    return (np.imag(a),)
 
 
 @Operation.factory
@@ -777,7 +785,7 @@ def Real(a):
     """
     Complex real op.
     """
-    return np.real(a)
+    return (np.real(a),)
 
 
 @Operation.factory
@@ -785,7 +793,7 @@ def FFT2D(a):
     """
     Discrete 2D FT op.
     """
-    return np.fft.fft2(a)
+    return (np.fft.fft2(a),)
 
 
 @Operation.factory
@@ -793,7 +801,7 @@ def IFFT2D(a):
     """
     Discrete inverse 2D FT op.
     """
-    return np.fft.ifft2(a)
+    return (np.fft.ifft2(a),)
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -801,7 +809,7 @@ def Sum(a, reduction_indices, keep_dims):
     """
     Sum reduction op.
     """
-    return np.sum(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+    return (np.sum(a, axis=tuple(reduction_indices), keepdims=keep_dims),)
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -809,7 +817,7 @@ def Prod(a, reduction_indices, keep_dims):
     """
     Prod reduction op.
     """
-    return np.prod(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+    return (np.prod(a, axis=tuple(reduction_indices), keepdims=keep_dims),)
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -817,7 +825,7 @@ def Min(a, reduction_indices, keep_dims):
     """
     Min reduction op.
     """
-    return np.amin(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+    return (np.amin(a, axis=tuple(reduction_indices), keepdims=keep_dims),)
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -825,7 +833,7 @@ def Max(a, reduction_indices, keep_dims):
     """
     Max reduction op.
     """
-    return np.amax(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+    return (np.amax(a, axis=tuple(reduction_indices), keepdims=keep_dims),)
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -833,7 +841,7 @@ def Mean(a, reduction_indices, keep_dims):
     """
     Mean reduction op.
     """
-    return np.mean(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+    return (np.mean(a, axis=tuple(reduction_indices), keepdims=keep_dims),)
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -841,7 +849,7 @@ def All(a, reduction_indices, keep_dims):
     """
     All reduction op.
     """
-    return np.all(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+    return (np.all(a, axis=tuple(reduction_indices), keepdims=keep_dims),)
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -849,7 +857,7 @@ def Any(a, reduction_indices, keep_dims):
     """
     Any reduction op.
     """
-    return np.any(a, axis=tuple(reduction_indices), keepdims=keep_dims)
+    return (np.any(a, axis=tuple(reduction_indices), keepdims=keep_dims),)
 
 
 def seg_map(func, a, ids):
@@ -868,7 +876,7 @@ def SegmentSum(a, ids, *args):
     Segmented sum op.
     """
     func = lambda idxs: reduce(np.add, a[idxs])
-    return seg_map(func, a, ids)
+    return (seg_map(func, a, ids),)
 
 
 @Operation.factory
@@ -877,7 +885,7 @@ def SegmentProd(a, ids):
     Segmented prod op.
     """
     func = lambda idxs: reduce(np.multiply, a[idxs])
-    return seg_map(func, a, ids)
+    return (seg_map(func, a, ids),)
 
 
 @Operation.factory
@@ -886,7 +894,7 @@ def SegmentMin(a, ids):
     Segmented min op.
     """
     func = lambda idxs: np.amin(a[idxs], axis=0)
-    return seg_map(func, a, ids)
+    return (seg_map(func, a, ids),)
 
 
 @Operation.factory
@@ -895,7 +903,7 @@ def SegmentMax(a, ids):
     Segmented max op.
     """
     func = lambda idxs: np.amax(a[idxs], axis=0)
-    return seg_map(func, a, ids)
+    return (seg_map(func, a, ids),)
 
 
 @Operation.factory
@@ -904,7 +912,7 @@ def SegmentMean(a, ids):
     Segmented mean op.
     """
     func = lambda idxs: np.mean(a[idxs], axis=0)
-    return seg_map(func, a, ids)
+    return (seg_map(func, a, ids),)
 
 
 @Operation.factory
@@ -912,7 +920,7 @@ def SparseSegmentSum(a, idxs, ids):
     """
     Sparse segmented sum op.
     """
-    return SegmentSum.func(a[idxs], ids)
+    return (SegmentSum.func(a[idxs], ids),)
 
 
 @Operation.factory
@@ -920,7 +928,7 @@ def SparseSegmentMean(a, idxs, ids):
     """
     Sparse segmented mean op.
     """
-    return SegmentMean.func(a[idxs], ids)
+    return (SegmentMean.func(a[idxs], ids),)
 
 
 @Operation.factory
@@ -929,7 +937,23 @@ def SparseSegmentSqrtN(a, idxs, ids):
     Sparse segmented sum / sqrt(n=len(idxs)) op.
     """
     func = lambda _idxs: np.divide(reduce(np.add, a[idxs][_idxs]), np.math.sqrt(len(_idxs)))
-    return seg_map(func, a, ids)
+    return (seg_map(func, a, ids),)
+
+
+@Operation.factory
+def ArgMin(a, dim):
+    """
+    Argmin op.
+    """
+    return (np.argmin(a, axis=dim),)
+
+
+@Operation.factory
+def ArgMax(a, dim):
+    """
+    Argmax op.
+    """
+    return (np.argmax(a, axis=dim),)
 
 
 @Operation.factory
@@ -938,7 +962,7 @@ def Softmax(a):
     Softmax op.
     """
     e = np.exp(a)
-    return np.divide(e, np.sum(e, axis=-1, keepdims=True))
+    return (np.divide(e, np.sum(e, axis=-1, keepdims=True)),)
 
 
 @Operation.factory
@@ -946,7 +970,7 @@ def Rank(a):
     """
     Rank op.
     """
-    return len(a.shape)
+    return (len(a.shape),)
 
 
 @Operation.factory
@@ -954,4 +978,4 @@ def Range(start, limit, delta):
     """
     Range op.
     """
-    return np.arange(start, limit, delta)
+    return (np.arange(start, limit, delta),)

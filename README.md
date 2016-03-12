@@ -29,6 +29,11 @@ pip install tfdeploy
 or by simply copying the file into your project.
 
 
+##### Development status
+
+Currently, all math ops and a selection of nn ops are implemented. The remaining ops will follow within a few days, so there might be some  ``UnknownOperationException``'s during conversion. See [milestone v0.2.0](https://github.com/riga/tfdeploy/milestones/v0.2.0). 
+
+
 ## Why?
 
 Working with tensorflow is awesome. Model definition and training is simple yet powerful, and the range of built-in features is just striking.
@@ -42,7 +47,7 @@ To boil it down, tfdeploy
 - **does not need tensorflow** during evaluation.
 - only depends on numpy.
 - can load one or more models from a single file.
-- does not support GPUs.
+- does not support GPUs (maybe [gnumpy](http://www.cs.toronto.edu/~tijmen/gnumpy.html) is worth a try here).
 
 
 ## How?
@@ -92,7 +97,7 @@ result = y.eval({x: batch})
 
 ##### Write your own ``Operation``
 
-tfdeploy supports ~~most of the~~ all math ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html) (nn Ops are currently added). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom ops, you might want to extend tfdeploy:
+tfdeploy supports most of the ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom ops, you might want to extend tfdeploy by defining a new class op that inherits from ``tfdeploy.Operation``:
 
 ```python
 import tensorflow as tf

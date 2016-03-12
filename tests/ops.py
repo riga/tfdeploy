@@ -397,6 +397,10 @@ class OpsTestCase(TestCase):
         t = tf.nn.softmax(self.random(10, 5))
         self.check(t)
 
+    def test_Shape(self):
+        t = tf.shape(self.random(3, 4, 5))
+        self.check(t)
+
     def test_Rank(self):
         t = tf.rank(self.random(3, 3))
         self.check(t)

@@ -1107,6 +1107,14 @@ def Softmax(a):
 
 
 @Operation.factory
+def Shape(a):
+    """
+    Shape op.
+    """
+    return np.array(a.shape, dtype=np.int32),
+
+
+@Operation.factory
 def Rank(a):
     """
     Rank op.
@@ -1119,4 +1127,12 @@ def Range(start, limit, delta):
     """
     Range op.
     """
-    return np.arange(start, limit, delta),
+    return np.arange(start, limit, delta, dtype=np.int32),
+
+
+@Operation.factory(attrs=("dtype",))
+def RandomUniform(shape, dtype):
+    """
+    Random uniform op.
+    """
+    return np.random.uniform(size=reduce(mul, shape)).reshape(shape).astype(dtype_map[dtype]),

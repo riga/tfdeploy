@@ -130,7 +130,7 @@ model.save("model.pkl")
 
 ## Performance
 
-tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal operations are nearly overhead-free. All mathematical operations use numpy vectorization.
+tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal operations are nearly overhead-free. Math/array operations use numpy vectorization.
 
 iPython shell:
 

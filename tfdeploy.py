@@ -459,6 +459,34 @@ class Operation(object):
         return wrapper if func is None else wrapper(func)
 
 
+dtype_map = {
+    1: np.float32,
+    2: np.float64,
+    3: np.int32,
+    4: np.uint8,
+    5: np.int16,
+    6: np.int8,
+    7: np.object,
+    8: np.complex64,
+    9: np.int64,
+    10: np.bool,
+    14: np.uint16,
+    17: np.uint16,
+    101: np.float32,
+    102: np.float64,
+    103: np.int32,
+    104: np.uint8,
+    105: np.int16,
+    106: np.int8,
+    107: np.object,
+    108: np.complex64,
+    109: np.int64,
+    110: np.bool,
+    114: np.uint16,
+    117: np.uint16
+}
+
+
 lgamma_vec = np.vectorize(np.math.lgamma)
 erf_vec = np.vectorize(np.math.erf)
 erfc_vec = np.vectorize(np.math.erfc)

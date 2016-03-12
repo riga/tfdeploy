@@ -364,6 +364,26 @@ class OpsTestCase(TestCase):
         t = tf.invert_permutation(np.random.permutation(10))
         self.check(t)
 
+    def test_Relu(self):
+        t = tf.nn.relu(self.random(100) - 0.5)
+        self.check(t)
+
+    def test_Relu6(self):
+        t = tf.nn.relu6((self.random(100) - 0.5) * 20)
+        self.check(t)
+
+    def test_Elu(self):
+        t = tf.nn.elu(self.random(100) - 0.5)
+        self.check(t)
+
+    def test_Softplus(self):
+        t = tf.nn.softplus(self.random(100) - 0.5)
+        self.check(t)
+
+    def test_Softsign(self):
+        t = tf.nn.softsign(self.random(100) - 0.5)
+        self.check(t)
+
     def test_Softmax(self):
         t = tf.nn.softmax(self.random(10, 5))
         self.check(t)

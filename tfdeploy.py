@@ -1029,6 +1029,46 @@ def InvertPermutation(a):
 
 
 @Operation.factory
+def Relu(a):
+    """
+    Relu op.
+    """
+    return np.maximum(a, 0),
+
+
+@Operation.factory
+def Relu6(a):
+    """
+    Relu6 op.
+    """
+    return np.clip(a, 0, 6),
+
+
+@Operation.factory
+def Elu(a):
+    """
+    Elu op.
+    """
+    return np.where(a < 0, np.subtract(np.exp(a), 1), a),
+
+
+@Operation.factory
+def Softplus(a):
+    """
+    Softplus op.
+    """
+    return np.log(np.add(np.exp(a), 1)),
+
+
+@Operation.factory
+def Softsign(a):
+    """
+    Softsign op.
+    """
+    return np.divide(a, np.add(np.abs(a), 1)),
+
+
+@Operation.factory
 def Softmax(a):
     """
     Softmax op.

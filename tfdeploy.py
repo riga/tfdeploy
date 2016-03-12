@@ -22,6 +22,7 @@ import os
 import re
 from uuid import uuid4
 from functools import reduce
+from operator import mul
 from itertools import product
 from collections import defaultdict
 
@@ -357,9 +358,9 @@ class Operation(object):
        Keyword arguments containing configuration values that will be passed to *func*.
     """
 
-    types = tuple()
+    types = ()
     unpack = True
-    attrs = tuple()
+    attrs = ()
 
     def __init__(self, tfop, tfsess):
         super(Operation, self).__init__()
@@ -986,7 +987,7 @@ def SparseSegmentSum(a, idxs, ids):
     """
     Sparse segmented sum op.
     """
-    return SegmentSum.func(a[idxs], ids),
+    return SegmentSum.func(a[idxs], ids)
 
 
 @Operation.factory
@@ -994,7 +995,7 @@ def SparseSegmentMean(a, idxs, ids):
     """
     Sparse segmented mean op.
     """
-    return SegmentMean.func(a[idxs], ids),
+    return SegmentMean.func(a[idxs], ids)
 
 
 @Operation.factory
@@ -1028,7 +1029,7 @@ def ListDiff(a, b):
     List diff op.
     """
     d = np.setdiff1d(a, b)
-    return d, np.searchsorted(a, d)
+    return d, np.searchsorted(a, d).astype(np.int32)
 
 
 @Operation.factory
@@ -1045,7 +1046,7 @@ def Unique(a):
     Unique op.
     """
     _, idxs, inv = np.unique(a, return_index=True, return_inverse=True)
-    return a[np.sort(idxs)], idxs[inv]
+    return a[np.sort(idxs)], idxs[inv].astype(np.int32)
 
 
 @Operation.factory
@@ -1053,7 +1054,7 @@ def InvertPermutation(a):
     """
     Invert perm op.
     """
-    return np.argsort(a),
+    return np.argsort(a).astype(np.int32),
 
 
 @Operation.factory

@@ -43,6 +43,7 @@ class OpsTestCase(TestCase):
             import pdb; pdb.set_trace()
 
         if isinstance(rtf, np.ndarray):
+            self.assertEqual(rtf.dtype, rtd.dtype)
             if not stats:
                 self.assertTrue(np.allclose(rtf, rtd))
             else:
@@ -83,6 +84,14 @@ class OpsTestCase(TestCase):
 
     def test_Div(self):
         t = tf.div(*self.random((3, 5), (3, 5)))
+        self.check(t)
+
+    def test_TrueDiv(self):
+        t = tf.truediv(*self.random((3, 5), (3, 5)))
+        self.check(t)
+
+    def test_FloorDiv(self):
+        t = tf.floordiv(*self.random((3, 5), (3, 5)))
         self.check(t)
 
     def test_Cross(self):

@@ -3,7 +3,7 @@
 
 import os
 import numpy as np
-from base import TestCase, tfdeploy as td
+from .base import TestCase, tfdeploy as td
 import tensorflow as tf
 
 

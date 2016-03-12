@@ -14,20 +14,44 @@ __license__    = "MIT"
 __status__     = "Development"
 __version__    = "0.1.7"
 
-__all__ = ["Model", "Operation", "UnknownOperationException", "OperationMismatchException"]
+__all__ = ["Model", "Tensor", "Operation", "UnknownOperationException",
+           "OperationMismatchException"]
 
 
 import os
 import re
-import cPickle
 from uuid import uuid4
 from functools import reduce
 from itertools import product
 from collections import defaultdict
+
+try:
+    # python 2
+    import cPickle as pickle
+except ImportError:
+    # python 3
+    import pickle
+
 import numpy as np
 
 
 _locals = locals()
+
+
+# metaclass decorator from six package, credits to Benjamin Peterson
+def add_metaclass(metaclass):
+    def wrapper(cls):
+        orig_vars = cls.__dict__.copy()
+        slots = orig_vars.get("__slots__")
+        if slots is not None:
+            if isinstance(slots, str):
+                slots = [slots]
+            for slots_var in slots:
+                orig_vars.pop(slots_var)
+        orig_vars.pop("__dict__", None)
+        orig_vars.pop("__weakref__", None)
+        return metaclass(cls.__name__, cls.__bases__, orig_vars)
+    return wrapper
 
 
 class Model(object):
@@ -124,7 +148,7 @@ class Model(object):
         """
         path = os.path.expandvars(os.path.expanduser(path))
         with open(path, "r") as f:
-            roots = cPickle.load(f)
+            roots = pickle.load(f)
 
         for key, tensor in roots.items():
             self.add(tensor, key=key)
@@ -135,7 +159,7 @@ class Model(object):
         """
         path = os.path.expandvars(os.path.expanduser(path))
         with open(path, "w") as f:
-            cPickle.dump(self.roots, f)
+            pickle.dump(self.roots, f)
 
 
 class TensorRegister(type):
@@ -153,6 +177,7 @@ class TensorRegister(type):
         return cls.instances[tftensor]
 
 
+@add_metaclass(TensorRegister)
 class Tensor(object):
     """
     Building block of a model. In *graph* terms, tensors represent connections between nodes (ops)
@@ -180,8 +205,6 @@ class Tensor(object):
        The value of this tensor. When created from a ``tensorflow.Variable``, this will be the value
        of that variable, or *None* otherwise until it is evaluated the first time.
     """
-
-    __metaclass__ = TensorRegister
 
     def __init__(self, tftensor, tfsess):
         super(Tensor, self).__init__()
@@ -292,6 +315,7 @@ class OperationMismatchException(Exception):
     pass
 
 
+@add_metaclass(OperationRegister)
 class Operation(object):
     """
     Building block of a model. In *graph* terms, operations (ops) represent nodes that are connected
@@ -332,8 +356,6 @@ class Operation(object):
 
        Keyword arguments containing configuration values that will be passed to *func*.
     """
-
-    __metaclass__ = OperationRegister
 
     types = tuple()
     unpack = True
@@ -430,7 +452,7 @@ class Operation(object):
             name = func.__name__
             classdict = {"func": staticmethod(func)}
             classdict.update(kwargs)
-            Op = Operation.__metaclass__(name, (Operation,), classdict)
+            Op = Operation.__class__(name, (Operation,), classdict)
             Op.__doc__ = func.__doc__
             _locals[name] = Op
             return Op
@@ -700,7 +722,7 @@ def BatchMatMul(a, b, adj_a, adj_b):
     Batched matrix multiplication op.
     """
     # apply adjoint op if required along last two axes
-    axes = range(len(a.shape))
+    axes = list(range(len(a.shape)))
     axes.append(axes.pop(-2))
     if adj_a:
         a = np.conj(np.transpose(a, axes=axes))
@@ -708,8 +730,8 @@ def BatchMatMul(a, b, adj_a, adj_b):
         b = np.conj(np.transpose(b, axes=axes))
     # create the target tensor
     r = np.empty(a.shape[:-2] + (a.shape[-2], b.shape[-1]))
-    # no batched dot op in np so loop over all indexes except last two dims
-    for idx in product(*(xrange(dim) for dim in a.shape[:-2])):
+    # no batched dot op in np, so loop over all indexes except last two dims
+    for idx in product(*(range(dim) for dim in a.shape[:-2])):
         r[idx] = np.dot(a[idx], b[idx])
     return r,
 

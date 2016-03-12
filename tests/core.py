@@ -2,7 +2,7 @@
 
 
 import numpy as np
-from base import TestCase, tfdeploy as td
+from .base import TestCase, tfdeploy as td
 
 
 __all__ = ["CoreTestCase"]

@@ -374,6 +374,7 @@ class Operation(object):
     types = ()
     unpack = True
     attrs = ()
+    output_dtypes = False
 
     def __init__(self, tf_op, *args, **kwargs):
         super(Operation, self).__init__()
@@ -391,6 +392,9 @@ class Operation(object):
 
         # store attributes as kwargs for calls to eval
         self.kwargs = [tf_op.get_attr(attr) for attr in (self.attrs or [])]
+
+        # store output dtypes for calls to eval when x is True
+        self.output_dtypes = [dtype_map[dtype] for dtype in tf_op._output_types]
 
     @classmethod
     def new(cls, tf_op, *args, **kwargs):
@@ -444,6 +448,8 @@ class Operation(object):
             args.extend(self.kwargs)
         else:
             args = [args] + self.kwargs
+        if self.__class__.output_dtypes:
+            args.append(self.output_dtypes)
 
         self.value = self.func(*args)
 

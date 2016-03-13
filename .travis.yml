@@ -4,27 +4,19 @@ sudo: required
 matrix:
   include:
     - os: linux
+      dist: trusty
       python: "2.7"
     - os: linux
+      dist: trusty
       python: "3.4"
-    - os: osx
-      python: "2.7"
-    - os: osx
-      python: "3.5"
 
 install:
   - pip install numpy
-  - if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then
+  - if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
       pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.7.1-cp27-none-linux_x86_64.whl;
     fi
-  - if [ "$TRAVIS_PYTHON_VERSION" = "3.4" ] && [ "$TRAVIS_OS_NAME" == "linux" ]; then
+  - if [ "$TRAVIS_PYTHON_VERSION" = "3.4" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
       pip3 install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.7.1-cp34-none-linux_x86_64.whl;
-    fi
-  - if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ] && [ "$TRAVIS_OS_NAME" == "osx" ]; then
-      pip install https://storage.googleapis.com/tensorflow/mac/tensorflow-0.7.1-cp27-none-any.whl;
-    fi
-  - if [ "$TRAVIS_PYTHON_VERSION" = "3.5" ] && [ "$TRAVIS_OS_NAME" == "osx" ]; then
-      pip3 install https://storage.googleapis.com/tensorflow/mac/tensorflow-0.7.1-cp35-none-any.whl;
     fi
 
 script: python -m unittest tests

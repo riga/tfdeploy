@@ -27,6 +27,16 @@ exclude_patterns = []
 pygments_style = "sphinx"
 html_logo = "../logo.png"
 html_theme = "alabaster"
+html_sidebars = {"**": [
+    "about.html",
+    "localtoc.html",
+    "searchbox.html"]
+}
+html_theme_options = {
+    "github_user": "riga",
+    "github_repo": "tfdeploy",
+    "travis_button": True
+}
 
 
 extensions = [

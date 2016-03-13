@@ -1,7 +1,7 @@
 <img src="https://raw.githubusercontent.com/riga/tfdeploy/master/logo.png" alt="tfdeploy logo" width="250"/>
 -
 
-![](https://travis-ci.org/riga/tfdeploy.svg?branch=master)
+[![Travis CI Build Status](https://travis-ci.org/riga/tfdeploy.svg?branch=master)](https://travis-ci.org/riga/tfdeploy)
 
 Deploy [tensorflow](https://www.tensorflow.org) graphs for *faster* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
 

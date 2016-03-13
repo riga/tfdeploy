@@ -104,6 +104,7 @@ tfdeploy supports most of the ``Operation``'s [implemented in tensorflow](https:
 ```python
 import tensorflow as tf
 import tfdeploy as td
+import numpy as np
 
 # ... write you model here ...
 
@@ -124,7 +125,7 @@ def InvertedSoftmax(a):
     e = np.exp(-a)
     return np.divide(e, np.sum(e, axis=-1, keepdims=True)),
 
-# now, we're good to go
+# now we're good to go
 model = td.Model()
 model.add(y, sess)
 model.save("model.pkl")

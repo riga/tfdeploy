@@ -1,16 +1,15 @@
+dist: trusty
 language: python
 python:
   - "2.7"
-  - "3.2"
-  - "3.3"
   - "3.4"
   - "3.5"
 install:
-  - if [ "$(python -c "import sys;print(sys.version_info[0])")" = "2" ]; then
-      mypip=pip;
+  - if [ "$TRAVIS_PYTHON_VERSION" == "2.*" ]; then
+      pip install numpy;
+      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.7.1-cp27-none-linux_x86_64.whl;
     else
-      mypip=pip3;
+      pip3 install numpy;
+      pip3 install https://storage.googleapis.com/tensorflow/mac/tensorflow-0.7.1-cp35-none-any.whl;
     fi
-  - $mypip install numpy
-  - $mypip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.7.1-cp27-none-linux_x86_64.whl
 script: "python -m unittest tests"

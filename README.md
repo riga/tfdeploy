@@ -40,12 +40,12 @@ Currently, all math ops and a selection of nn ops are implemented. The remaining
 
 Working with tensorflow is awesome. Model definition and training is simple yet powerful, and the range of built-in features is just striking.
 
-However, when it comes down to model deployment and evaluation things get a bit more cumbersome than they should be. You either export your graph to a new file *and* [save your trained variables](https://www.tensorflow.org/versions/master/how_tos/variables/index.html#saving-variables) in a separate file, or you make use of tensorflow's [serving system](https://www.tensorflow.org/versions/master/tutorials/tfserve/index.html). Wouldn't it be great if you could just export your model to a simple numpy-based callable? Of course it would. And this is exactly what tfdeploy does for you.
+However, when it comes down to model deployment and evaluation, things get a bit more cumbersome than they should be. You either export your graph to a new file *and* [save your trained variables](https://www.tensorflow.org/versions/master/how_tos/variables/index.html#saving-variables) in a separate file, or you make use of tensorflow's [serving system](https://www.tensorflow.org/versions/master/tutorials/tfserve/index.html). Wouldn't it be great if you could just export your model to a simple numpy-based callable? Of course it would. And this is exactly what tfdeploy does for you.
 
 To boil it down, tfdeploy
 
 - is lightweight. A single file with < 150 lines of core code. Just copy it to your project.
-- [way faster](#performance) then using tensorflow's ``Tensor.eval``.
+- [faster](#performance) then using tensorflow's ``Tensor.eval``.
 - **does not need tensorflow** during evaluation.
 - only depends on numpy.
 - can load one or more models from a single file.

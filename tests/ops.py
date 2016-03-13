@@ -78,6 +78,42 @@ class OpsTestCase(TestCase):
         t = tf.identity(self.random(3, 4))
         self.check(t)
 
+    def test_Cast(self):
+        t = tf.cast(self.random(3, 4).astype("float32"), tf.float64)
+        self.check(t)
+
+    def test_StringToNumber(self):
+        t = tf.string_to_number(list("0123456789"))
+        self.check(t)
+
+    def test_Shape(self):
+        t = tf.shape(self.random(3, 4, 5))
+        self.check(t)
+
+    def test_Size(self):
+        t = tf.size(self.random(3, 4))
+        self.check(t)
+
+    def test_Rank(self):
+        t = tf.rank(self.random(3, 3))
+        self.check(t)
+
+    def test_Reshape(self):
+        t = tf.reshape(self.random(3, 4, 5), (2, -1))
+        self.check(t)
+
+    def test_Squeeze(self):
+        t = tf.squeeze(self.random(1, 2, 1, 3, 3, 1))
+        self.check(t)
+
+    def test_ExpandDims(self):
+        t = tf.expand_dims(self.random(2, 3, 3, 4), -2)
+        self.check(t)
+
+    def test_Slice(self):
+        t = tf.slice(np.arange(3*4*8*6).reshape(3, 4, 8, 6), [1, 1, 2, 2], 4 * [2])
+        self.check(t)
+
     def test_Add(self):
         t = tf.add(*self.random((3, 4), (3, 4)))
         self.check(t)
@@ -381,6 +417,62 @@ class OpsTestCase(TestCase):
         t = tf.invert_permutation(np.random.permutation(10))
         self.check(t)
 
+    def test_LinSpace(self):
+        t = tf.linspace(0., 10., 15)
+        self.check(t)
+
+    def test_Range(self):
+        t = tf.range(1, 10, 2)
+        self.check(t)
+
+    def test_RandomStandardNormal(self):
+        t = tf.random_normal((40, 30), dtype="float32")
+        # compare only dtype
+        def comp(rtf, rtd):
+            self.assertEqual(rtf.dtype, rtd.dtype)
+        self.check(t, comp=comp)
+
+    def test_TruncatedNormal(self):
+        t = tf.truncated_normal((40, 300), dtype="float32")
+        # compare dtype and 2-sigma truncation
+        def comp(rtf, rtd):
+            self.assertEqual(rtf.dtype, rtd.dtype)
+            self.assertLessEqual(np.max(np.abs(rtd)), 2)
+        self.check(t, comp=comp)
+
+    def test_RandomUniform(self):
+        t = tf.random_uniform((50, 80), -2, 3, dtype="float32")
+        # compare only min, max and dtype
+        def comp(rtf, rtd):
+            self.assertLess(np.max(rtd), 3)
+            self.assertGreaterEqual(np.min(rtd), -2)
+            self.assertEqual(rtd.dtype, np.float32)
+        self.check(t, comp=comp)
+
+    def test_RandomUniformInt(self):
+        # no python interface yet, but might be something like
+        # t = tf.random_uniform_int((50, 80), -2, 3)
+        # # compare only min and max
+        # def comp(rtf, rtd):
+        #     self.assertLess(np.max(rtd), 3)
+        #     self.assertGreaterEqual(np.min(rtd), -2)
+        # self.check(t, comp=comp)
+        pass
+
+    def test_RandomShuffle(self):
+        t = tf.random_shuffle(self.random(10, 4))
+        # compare only sum of first axis
+        def comp(rtf, rtd):
+            self.assertTrue(np.allclose(np.sum(rtf, axis=0), np.sum(rtd, axis=0)))
+        self.check(t, comp=comp)
+
+    def test_RandomCrop(self):
+        t = tf.random_crop(np.arange(3 * 4 * 8).reshape(3, 4, 8), [1, 2, 4])
+        # compare only shape
+        def comp(rtf, rtd):
+            self.assertEqual(rtf.shape, rtd.shape)
+        self.check(t, comp=comp)
+
     def test_Relu(self):
         t = tf.nn.relu(self.random(100) - 0.5)
         self.check(t)
@@ -415,29 +507,4 @@ class OpsTestCase(TestCase):
 
     def test_Softmax(self):
         t = tf.nn.softmax(self.random(10, 5))
-        self.check(t)
-
-    def test_Shape(self):
-        t = tf.shape(self.random(3, 4, 5))
-        self.check(t)
-
-    def test_Rank(self):
-        t = tf.rank(self.random(3, 3))
-        self.check(t)
-
-    def test_Range(self):
-        t = tf.range(1, 10, 2)
-        self.check(t)
-
-    def test_RandomUniform(self):
-        t = tf.random_uniform((5, 8), -2, 3, dtype="float32")
-        # compare only min, max and dtype
-        def comp(rtf, rtd):
-            self.assertLess(np.max(rtd), 3)
-            self.assertGreaterEqual(np.min(rtd), -2)
-            self.assertEqual(rtd.dtype, np.float32)
-        self.check(t, comp=comp)
-
-    def test_Reshape(self):
-        t = tf.reshape(self.random(3, 4, 5), (2, -1))
         self.check(t)

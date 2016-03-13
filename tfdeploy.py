@@ -521,6 +521,79 @@ def Identity(a):
     return a,
 
 
+@Operation.factory(types=("Cast", "StringToNumber"), output_dtypes=True)
+def Cast(a, output_dtypes):
+    """
+    Cast op.
+    """
+    return a.astype(output_dtypes[0]),
+
+
+@Operation.factory
+def Shape(a):
+    """
+    Shape op.
+    """
+    return np.array(a.shape, dtype=np.int32),
+
+
+@Operation.factory
+def Size(a):
+    """
+    Size op.
+    """
+    return a.size,
+
+
+@Operation.factory
+def Rank(a):
+    """
+    Rank op.
+    """
+    return len(a.shape),
+
+
+@Operation.factory
+def Reshape(a, shape):
+    """
+    Reshape op.
+    """
+    return np.reshape(a, shape),
+
+
+@Operation.factory(attrs=("squeeze_dims",))
+def Squeeze(a, squeeze_dims):
+    """
+    Squeeze op, i.e. removes singular axes.
+    """
+    if not squeeze_dims:
+        squeeze_dims = list(range(len(a.shape)))
+    slices = [(0 if (dim == 1 and i in squeeze_dims) else slice(None)) \
+              for i, dim in enumerate(a.shape)]
+    return a[slices],
+
+
+@Operation.factory
+def ExpandDims(a, dim):
+    """
+    Expand dim op, i.e. add singular axis at dim.
+    """
+    shape = list(a.shape)
+    if dim >= 0:
+        shape.insert(dim, 1)
+    else:
+        shape.insert(len(shape) + dim + 1, 1)
+    return a.reshape(*shape),
+
+
+@Operation.factory
+def Slice(a, begin, size):
+    """
+    Slicing op.
+    """
+    return a[[slice(*tpl) for tpl in zip(begin, begin+size)]],
+
+
 @Operation.factory(types=("Add", "BiasAdd"))
 def Add(a, b):
     """
@@ -1078,6 +1151,81 @@ def InvertPermutation(a):
 
 
 @Operation.factory
+def LinSpace(start, stop, num):
+    """
+    Linspace op.
+    """
+    return np.linspace(start, stop, num=num, dtype=np.float32),
+
+
+@Operation.factory
+def Range(start, limit, delta):
+    """
+    Range op.
+    """
+    return np.arange(start, limit, delta, dtype=np.int32),
+
+
+@Operation.factory(attrs=("dtype", "seed"))
+def RandomStandardNormal(shape, dtype, seed):
+    """
+    Standard (mu=0, sigma=1) gaussian op.
+    """
+    if seed:
+        np.random.seed(seed)
+    return np.random.normal(size=reduce(mul, shape)).reshape(shape).astype(dtype_map[dtype]),
+
+
+@Operation.factory(attrs=("dtype", "seed"))
+def TruncatedNormal(shape, dtype, seed):
+    """
+    Standard (mu=0, sigma=1) gaussian op with truncation above 2 sigma.
+    """
+    if seed:
+        np.random.seed(seed)
+    n = reduce(mul, shape)
+    r = np.empty(n, dtype=dtype_map[dtype])
+    idxs = np.ones(n, dtype=np.bool)
+    while n:
+        r[idxs] = np.random.normal(size=n)
+        idxs = np.abs(r) > 2
+        n = np.sum(idxs)
+    return r.reshape(shape),
+
+
+@Operation.factory(attrs=("dtype", "seed"))
+def RandomUniform(shape, dtype, seed):
+    """
+    Random uniform op.
+    """
+    if seed:
+        np.random.seed(seed)
+    return np.random.uniform(size=shape).astype(dtype_map[dtype]),
+
+
+@Operation.factory(attrs=("seed",))
+def RandomUniformInt(shape, minval, maxval, seed):
+    """
+    Random uniform int op.
+    """
+    if seed:
+        np.random.seed(seed)
+    return np.random.randint(minval, maxval, size=shape),
+
+
+@Operation.factory(attrs=("seed",))
+def RandomShuffle(a, seed):
+    """
+    Random uniform op.
+    """
+    if seed:
+        np.random.seed(seed)
+    r = a.copy()
+    np.random.shuffle(r)
+    return r,
+
+
+@Operation.factory
 def Relu(a):
     """
     Relu op.
@@ -1140,43 +1288,3 @@ def Softmax(a):
     """
     e = np.exp(a)
     return np.divide(e, np.sum(e, axis=-1, keepdims=True)),
-
-
-@Operation.factory
-def Shape(a):
-    """
-    Shape op.
-    """
-    return np.array(a.shape, dtype=np.int32),
-
-
-@Operation.factory
-def Rank(a):
-    """
-    Rank op.
-    """
-    return len(a.shape),
-
-
-@Operation.factory
-def Range(start, limit, delta):
-    """
-    Range op.
-    """
-    return np.arange(start, limit, delta, dtype=np.int32),
-
-
-@Operation.factory(attrs=("dtype",))
-def RandomUniform(shape, dtype):
-    """
-    Random uniform op.
-    """
-    return np.random.uniform(size=reduce(mul, shape)).reshape(shape).astype(dtype_map[dtype]),
-
-
-@Operation.factory
-def Reshape(a, shape):
-    """
-    Reshape op.
-    """
-    return np.reshape(a, shape),

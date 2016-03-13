@@ -57,7 +57,8 @@ def add_metaclass(metaclass):
 
 class Model(object):
     """
-    A trained model that contains one or more converted tensorflow graphs. Usage:
+    A trained model that contains one or more converted tensorflow graphs. When *path* is set, a
+    previously saved model is loaded from that path. Usage:
 
     .. code-block:: python
 
@@ -126,15 +127,15 @@ class Model(object):
     def __contains__(self, name):
         return self.get(name) is not None
 
-    def add(self, tensor, tfsess=None, key=None):
+    def add(self, tensor, tf_sess=None, key=None, **kwargs):
         """
         Adds a new root *tensor* for a *key* which, if *None*, defaults to a consecutive number.
         When *tensor* is not an instance of :py:class:`Tensor` but an instance of
-        ``tensorflow.Tensor``, it is converted first. In that case, *tfsess* should be a valid
-        tensorflow session.
+        ``tensorflow.Tensor``, it is converted first. In that case, *tf_sess* should be a valid
+        tensorflow session and *kwargs* are forwarded to the :py:class:`Tensor` constructor.
         """
         if not isinstance(tensor, Tensor):
-            tensor = Tensor(tensor, tfsess)
+            tensor = Tensor(tensor, tf_sess, **kwargs)
 
         if key is None:
             key = len(self.roots)
@@ -171,18 +172,21 @@ class TensorRegister(type):
 
     instances = {}
 
-    def __call__(cls, tftensor, tfsess):
+    def __call__(cls, tf_tensor, *args, **kwargs):
         # simply caching
-        if tftensor not in cls.instances:
-            cls.instances[tftensor] = super(TensorRegister, cls).__call__(tftensor, tfsess)
-        return cls.instances[tftensor]
+        if tf_tensor not in cls.instances:
+            inst = super(TensorRegister, cls).__call__(tf_tensor, *args, **kwargs)
+            cls.instances[tf_tensor] = inst
+        return cls.instances[tf_tensor]
 
 
 @add_metaclass(TensorRegister)
 class Tensor(object):
     """
     Building block of a model. In *graph* terms, tensors represent connections between nodes (ops)
-    of a graph. It contains information on the op it results from.
+    of a graph. It contains information on the op it results from. The conversion uses the
+    (tensorflow) instances *tf_tensor* and *tf_sess*, *tf_feed_dict* can be set to evaluate the
+    tensor's current value.
 
     .. py:attribute:: name
        type: string
@@ -207,24 +211,24 @@ class Tensor(object):
        of that variable, or *None* otherwise until it is evaluated the first time.
     """
 
-    def __init__(self, tftensor, tfsess):
+    def __init__(self, tf_tensor, tf_sess, tf_feed_dict=None):
         super(Tensor, self).__init__()
 
-        if not tfsess:
-            raise ValueError("bad tensorflow session: %s" % tfsess)
+        if not tf_sess:
+            raise ValueError("bad tensorflow session: %s" % tf_sess)
 
-        self.name = tftensor.name
-        self.value_index = tftensor.value_index
+        self.name = tf_tensor.name
+        self.value_index = tf_tensor.value_index
         self.op = None
         self.value = None
         self.last_uuid = None
 
         # no op for variables, placeholders and constants
         # explicit value for variables and constants
-        if tftensor.op.type in ("Variable", "Const"):
-            self.value = tftensor.eval(session=tfsess)
-        elif tftensor.op.type != "Placeholder":
-            self.op = Operation.new(tftensor.op, tfsess)
+        if tf_tensor.op.type in ("Variable", "Const"):
+            self.value = tf_tensor.eval(session=tf_sess, feed_dict=tf_feed_dict)
+        elif tf_tensor.op.type != "Placeholder":
+            self.op = Operation.new(tf_tensor.op, tf_sess, tf_feed_dict=tf_feed_dict)
 
     def get(self, *names):
         """
@@ -294,11 +298,12 @@ class OperationRegister(type):
             metacls.classes[type] = cls
         return cls
 
-    def __call__(cls, tfop, tfsess):
+    def __call__(cls, tf_op, *args, **kwargs):
         # simply caching
-        if tfop not in cls.instances:
-            cls.instances[tfop] = super(OperationRegister, cls).__call__(tfop, tfsess)
-        return cls.instances[tfop]
+        if tf_op not in cls.instances:
+            inst = super(OperationRegister, cls).__call__(tf_op, *args, **kwargs)
+            cls.instances[tf_op] = inst
+        return cls.instances[tf_op]
 
 
 class UnknownOperationException(Exception):
@@ -320,7 +325,9 @@ class OperationMismatchException(Exception):
 class Operation(object):
     """
     Building block of a model. In *graph* terms, operations (ops) represent nodes that are connected
-    via tensors. It contains information on its input tensors.
+    via tensors. It contains information on its input tensors. The conversion uses the
+    (tensorflow) instance *tf_op*, all *args* and *kwargs* are forwarded to the :py:class:`Tensor`
+    constructor for this op's input tensors.
 
     .. py:attribute:: types
        type: tuple
@@ -362,34 +369,35 @@ class Operation(object):
     unpack = True
     attrs = ()
 
-    def __init__(self, tfop, tfsess):
+    def __init__(self, tf_op, *args, **kwargs):
         super(Operation, self).__init__()
 
         # compare types as a cross check
-        if tfop.type not in self.types:
+        if tf_op.type not in self.types:
             raise OperationMismatchException("operation types do not match: %s, %s" \
-                % (self.types, tfop.type))
+                                             % (self.types, tf_op.type))
 
-        self.name = tfop.name
-        self.inputs = tuple(Tensor(tftensor, tfsess) for tftensor in tfop.inputs)
+        self.name = tf_op.name
+        self.inputs = tuple(Tensor(tf_tensor, *args, **kwargs) for tf_tensor in tf_op.inputs)
 
         self.value = None
         self.last_uuid = None
 
         # store attributes as kwargs for calls to eval
-        self.kwargs = [tfop.get_attr(attr) for attr in (self.attrs or [])]
+        self.kwargs = [tf_op.get_attr(attr) for attr in (self.attrs or [])]
 
     @classmethod
-    def new(cls, tfop, tfsess):
+    def new(cls, tf_op, *args, **kwargs):
         """
-        Factory function that takes a tensorflow session *tfsess* and a tensorflow op *tfop*
-        and returns an instance of the appropriate op class. Raises an exception of type
-        :py:exc:`UnknownOperationException` in case the requested op type is not known.
+        Factory function that takes a tensorflow op *tf_op* and returns an instance of the
+        appropriate op class. *args* and *kwargs* are forwarded to the op constructor. Raises an
+        exception of type :py:exc:`UnknownOperationException` in case the requested op type is not
+        known.
         """
-        if tfop.type not in cls.classes:
-            raise UnknownOperationException("unknown operation: %s" % tfop.type)
+        if tf_op.type not in cls.classes:
+            raise UnknownOperationException("unknown operation: %s" % tf_op.type)
 
-        return cls.classes[tfop.type](tfop, tfsess)
+        return cls.classes[tf_op.type](tf_op, *args, **kwargs)
 
     def set_attr(self, attr, value):
         """

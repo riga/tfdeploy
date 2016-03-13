@@ -518,7 +518,7 @@ def Identity(a):
     """
     Identity op.
     """
-    return a,
+    return np.copy(a),
 
 
 @Operation.factory(types=("Cast", "StringToNumber"), output_dtypes=True)
@@ -526,7 +526,7 @@ def Cast(a, output_dtypes):
     """
     Cast op.
     """
-    return a.astype(output_dtypes[0]),
+    return np.copy(a).astype(output_dtypes[0]),
 
 
 @Operation.factory
@@ -542,7 +542,7 @@ def Size(a):
     """
     Size op.
     """
-    return a.size,
+    return np.array([a.size], dtype=np.int32),
 
 
 @Operation.factory
@@ -550,7 +550,7 @@ def Rank(a):
     """
     Rank op.
     """
-    return len(a.shape),
+    return np.array([len(a.shape)], dtype=np.int32),
 
 
 @Operation.factory
@@ -558,7 +558,7 @@ def Reshape(a, shape):
     """
     Reshape op.
     """
-    return np.reshape(a, shape),
+    return np.copy(a).reshape(shape),
 
 
 @Operation.factory(attrs=("squeeze_dims",))
@@ -570,7 +570,7 @@ def Squeeze(a, squeeze_dims):
         squeeze_dims = list(range(len(a.shape)))
     slices = [(0 if (dim == 1 and i in squeeze_dims) else slice(None)) \
               for i, dim in enumerate(a.shape)]
-    return a[slices],
+    return np.copy(a)[slices],
 
 
 @Operation.factory
@@ -583,7 +583,7 @@ def ExpandDims(a, dim):
         shape.insert(dim, 1)
     else:
         shape.insert(len(shape) + dim + 1, 1)
-    return a.reshape(*shape),
+    return np.copy(a).reshape(*shape),
 
 
 @Operation.factory
@@ -591,7 +591,7 @@ def Slice(a, begin, size):
     """
     Slicing op.
     """
-    return a[[slice(*tpl) for tpl in zip(begin, begin+size)]],
+    return np.copy(a)[[slice(*tpl) for tpl in zip(begin, begin+size)]],
 
 
 @Operation.factory(types=("Add", "BiasAdd"))
@@ -1139,7 +1139,7 @@ def Unique(a):
     Unique op.
     """
     _, idxs, inv = np.unique(a, return_index=True, return_inverse=True)
-    return a[np.sort(idxs)], idxs[inv].astype(np.int32)
+    return np.copy(a)[np.sort(idxs)], idxs[inv].astype(np.int32)
 
 
 @Operation.factory

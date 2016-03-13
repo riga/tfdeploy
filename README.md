@@ -131,6 +131,12 @@ model.add(y, sess)
 model.save("model.pkl")
 ```
 
+When writing new ops, three things are important:
+
+- Try to avoid loops, prefer numpy vectorization.
+- Return a tuple.
+- Don't change incoming tensors/arrays in-place, always work on and return copies.
+
 
 ## Performance
 

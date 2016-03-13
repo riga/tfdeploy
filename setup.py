@@ -40,7 +40,7 @@ classifiers = [
 setup(
     name             = td.__name__,
     version          = td.__version__,
-    author           = ", ".join(td.__credits__),
+    author           = td.__author__,
     description      = td.__doc__.strip(),
     license          = td.__license__,
     url              = td.__contact__,

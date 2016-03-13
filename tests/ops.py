@@ -32,9 +32,12 @@ class OpsTestCase(TestCase):
 
         self.ndigits = 7
 
-    def check(self, t, ndigits=None, stats=False, abs=False, debug=False):
+    def check(self, t, comp=None, ndigits=None, stats=False, abs=False, debug=False):
         rtf = t.eval(session=self.sess)
         rtd = td.Tensor(t, self.sess).eval()
+
+        if hasattr(comp, "__call__"):
+            return comp(rtf, rtd)
 
         if ndigits is None:
             ndigits = self.ndigits
@@ -65,6 +68,11 @@ class OpsTestCase(TestCase):
                 return np.random.rand(*shapes)
         else:
             return tuple(self.random(*shape) for shape in shapes)
+
+    def test_ops_have_tests(self):
+        tests = [attr for attr in dir(self) if attr.startswith("test_")]
+        for type in td.OperationRegister.classes:
+            self.assertIn("test_" + type, tests)
 
     def test_Identity(self):
         t = tf.identity(self.random(3, 4))
@@ -408,3 +416,12 @@ class OpsTestCase(TestCase):
     def test_Range(self):
         t = tf.range(1, 10, 2)
         self.check(t)
+
+    def test_RandomUniform(self):
+        t = tf.random_uniform((5, 8), -2, 3, dtype="float32")
+        # compare only min, max and dtype
+        def comp(rtf, rtd):
+            self.assertLess(np.max(rtd), 3)
+            self.assertGreaterEqual(np.min(rtd), -2)
+            self.assertEqual(rtd.dtype, np.float32)
+        self.check(t, comp=comp)

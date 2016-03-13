@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Script to print a mapping between tensorflow and numpy dtypes
+Script that prints a mapping of tensorflow dtype nums to and numpy dtypes, e.g.:
+
+> python dtype_map.py
+dtype_map = {
+    1: np.float32,
+    2: np.float64,
+    3: np.int32,
+    4: np.uint8,
+    ...
+}
 """
 
 

@@ -139,10 +139,10 @@ iPython shell:
 ```bash
 > ipython -i tests/perf.py
 
-In [1]: %timeit -n100 test_tf()
+In [1]: %timeit -n 100 test_tf()
 100 loops, best of 3: 109 ms per loop
 
-In [2]: %timeit -n100 test_td()
+In [2]: %timeit -n 100 test_td()
 100 loops, best of 3: 60.5 ms per loop
 ```
 

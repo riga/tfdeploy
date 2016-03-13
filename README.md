@@ -1,6 +1,8 @@
 <img src="https://raw.githubusercontent.com/riga/tfdeploy/master/logo.png" alt="tfdeploy logo" width="250"/>
 -
 
+![](https://travis-ci.org/riga/tfdeploy.svg?branch=master)
+
 Deploy [tensorflow](https://www.tensorflow.org) graphs for *faster* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
 
 
@@ -142,6 +144,14 @@ In [1]: %timeit -n100 test_tf()
 
 In [2]: %timeit -n100 test_td()
 100 loops, best of 3: 60.5 ms per loop
+```
+
+## Contributing
+
+If you want to contribute with new ops and features, I'm happy to receive pull requests. Just make sure to add a new test case to ``tests/core.py`` or ``tests/ops.py`` and run it via:
+
+```bash
+> python -m unittest tests
 ```
 
 

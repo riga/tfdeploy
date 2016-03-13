@@ -1166,3 +1166,11 @@ def RandomUniform(shape, dtype):
     Random uniform op.
     """
     return np.random.uniform(size=reduce(mul, shape)).reshape(shape).astype(dtype_map[dtype]),
+
+
+@Operation.factory
+def Reshape(a, shape):
+    """
+    Reshape op.
+    """
+    return np.reshape(a, shape),

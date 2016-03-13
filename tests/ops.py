@@ -437,3 +437,7 @@ class OpsTestCase(TestCase):
             self.assertGreaterEqual(np.min(rtd), -2)
             self.assertEqual(rtd.dtype, np.float32)
         self.check(t, comp=comp)
+
+    def test_Reshape(self):
+        t = tf.reshape(self.random(3, 4, 5), (2, -1))
+        self.check(t)

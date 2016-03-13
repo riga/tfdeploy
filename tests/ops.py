@@ -401,6 +401,18 @@ class OpsTestCase(TestCase):
         t = tf.nn.softsign(self.random(100) - 0.5)
         self.check(t)
 
+    def test_BiasAdd(self):
+        t = tf.nn.bias_add(*self.random((4, 5), (5,)))
+        self.check(t)
+
+    def test_Sigmoid(self):
+        t = tf.nn.sigmoid(self.random(3, 4))
+        self.check(t)
+
+    def test_Tanh(self):
+        t = tf.nn.tanh(self.random(3, 4))
+        self.check(t)
+
     def test_Softmax(self):
         t = tf.nn.softmax(self.random(10, 5))
         self.check(t)

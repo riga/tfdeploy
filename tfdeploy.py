@@ -501,7 +501,7 @@ def Identity(a):
     return a,
 
 
-@Operation.factory
+@Operation.factory(types=("Add", "BiasAdd"))
 def Add(a, b):
     """
     Addition op.
@@ -1095,6 +1095,22 @@ def Softsign(a):
     Softsign op.
     """
     return np.divide(a, np.add(np.abs(a), 1)),
+
+
+@Operation.factory
+def Sigmoid(a):
+    """
+    Sogmoid (logistic) op.
+    """
+    return np.reciprocal(np.add(1, np.exp(-a))),
+
+
+@Operation.factory
+def Tanh(a):
+    """
+    Tanh op.
+    """
+    return np.tanh(a),
 
 
 @Operation.factory

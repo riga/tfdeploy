@@ -1,5 +1,0 @@
-tfdeploy
-========
-
-.. automodule:: tfdeploy
-   :members:

@@ -6,4 +6,4 @@
 *.pkl
 dist
 MANIFEST
-docs/build
+docs/_*

@@ -1,7 +1,7 @@
 tfdeploy
 ========
 
-.. centered:: This page contains only API docs. For more info, visinit `tfdeploy on GitHub <https://github.com/riga/tfdeploy>`_.
+.. centered:: This page contains only API docs. For more info, visit `tfdeploy on GitHub <https://github.com/riga/tfdeploy>`_.
 
 
 .. toctree::

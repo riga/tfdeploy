@@ -7,9 +7,9 @@ python:
   - "3.5"
 install:
   - if [ "$(python -c "import sys;print(sys.version_info[0])")" = "2" ]; then
-      mypip=pip
+      mypip=pip;
     else
-      mypip=pip3
+      mypip=pip3;
     fi
   - $mypip install numpy
   - $mypip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.7.1-cp27-none-linux_x86_64.whl

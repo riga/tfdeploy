@@ -14,7 +14,8 @@ class CoreTestCase(TestCase):
         super(CoreTestCase, self).__init__(*args, **kwargs)
 
         self.simple_model = td.Model()
-        self.simple_model.add(*self.get("simple", "y", "sess"))
+        y, sess = self.get("simple", "y", "sess")
+        self.simple_model.add(y, tf_sess=sess)
 
     def test_tensors(self):
         m = self.simple_model
@@ -44,18 +45,18 @@ class CoreTestCase(TestCase):
 
     def test_eval(self):
         m = self.simple_model
-        inp, outp = m.get("input", "output")
+        inp, outp, kp = m.get("input", "output", "keep_prob")
 
         # create an input batch
         examples = np.random.rand(1000, 10).astype("float32")
 
         # first, eval using tf
-        x, y, sess = self.get("simple", "x", "y", "sess")
-        result_tf = y.eval(session=sess, feed_dict={x: examples})
+        x, y, keep_prob, sess = self.get("simple", "x", "y", "keep_prob", "sess")
+        rtf = y.eval(session=sess, feed_dict={x: examples, keep_prob: 1.0})
 
         # then, eval using td
-        result_td = outp.eval({inp: examples})
+        rtd = outp.eval({inp: examples, kp: 1.0})
 
         # no element in the diff array should be larger than 1e-7
-        maxdiff = np.max(np.abs(result_tf - result_td))
+        maxdiff = np.max(np.abs(rtf - rtd))
         self.assertLess(maxdiff, 1e-7)

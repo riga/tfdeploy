@@ -223,11 +223,17 @@ class Tensor(object):
         self.value = None
         self.last_uuid = None
 
-        # no op for variables, placeholders and constants
-        # explicit value for variables and constants
+        # guess the value
+        # explicitly evaluate variables and constants, use feed_dict for placeholders
         if tf_tensor.op.type in ("Variable", "Const"):
             self.value = tf_tensor.eval(session=tf_sess, feed_dict=tf_feed_dict)
-        elif tf_tensor.op.type != "Placeholder":
+        elif tf_tensor.op.type == "Placeholder":
+            if tf_feed_dict is not None and tf_tensor in tf_feed_dict:
+                self.value = tf_feed_dict[tf_tensor]
+
+        # create the op
+        # no op for variables, placeholders and constants
+        if tf_tensor.op.type not in ("Variable", "Const", "Placeholder"):
             self.op = Operation.new(tf_tensor.op, tf_sess, tf_feed_dict=tf_feed_dict)
 
     def get(self, *names):
@@ -271,7 +277,7 @@ class Tensor(object):
         if self in feed_dict:
             self.value = feed_dict[self]
         elif self.op is not None:
-            self.value = self.op.eval(feed_dict, _uuid)[self.value_index]
+            self.value = self.op.eval(feed_dict=feed_dict, _uuid=_uuid)[self.value_index]
 
         return self.value
 
@@ -419,8 +425,8 @@ class Operation(object):
     def _get(self, name):
         return reduce(lambda t1,t2: t1 or t2.get(name), self.inputs, None)
 
-    def eval(self, feed_dict, _uuid=None):
-        """ eval(feed_dict)
+    def eval(self, feed_dict=None, _uuid=None):
+        """ eval(feed_dict=None)
         Returns the value of the output tensor. See :py:meth:`Tensor.eval` for more info.
         """
         # set a cache uuid for this eval call

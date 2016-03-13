@@ -114,14 +114,15 @@ class InvertedSoftmax(td.Operation):
     @staticmethod
     def func(a):
         e = np.exp(-a)
-        return np.divide(e, np.sum(e, axis=-1, keepdims=True))
+        # ops should return a tuple
+        return np.divide(e, np.sum(e, axis=-1, keepdims=True)),
 
 # this is equivalent to
 
 @td.Operation.factory
 def InvertedSoftmax(a):
     e = np.exp(-a)
-    return np.divide(e, np.sum(e, axis=-1, keepdims=True))
+    return np.divide(e, np.sum(e, axis=-1, keepdims=True)),
 
 # now, we're good to go
 model = td.Model()

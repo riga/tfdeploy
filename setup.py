@@ -48,5 +48,5 @@ setup(
     keywords         = keywords,
     classifiers      = classifiers,
     long_description = long_description,
-    install_requires = ["numpy"]
+    package_data     = {"": ["LICENSE"]}
 )

@@ -12,7 +12,7 @@ __credits__    = ["Marcel Rieger", "Benjamin Fischer"]
 __contact__    = "https://github.com/riga/tfdeploy"
 __license__    = "MIT"
 __status__     = "Development"
-__version__    = "0.1.8"
+__version__    = "0.1.9"
 
 __all__ = ["Model", "Tensor", "Operation", "UnknownOperationException",
            "OperationMismatchException"]
@@ -76,9 +76,22 @@ class Model(object):
        # ... training ...
 
        # create a model and save it to disk
-       model = Model()
+       model = td.Model()
        model.add(y, sess)
-       model.save("model.pkl")
+       model.save("/path/to/model.pkl")
+
+    And then in an other file:
+
+    .. code-block:: python
+
+       import tfdeploy as td
+       import numpy as np
+
+       model = td.Model("/path/to/model.pkl")
+       inp, outp = model.get("input", "output")
+
+       batch = np.random.rand(10000, 784)
+       result = outp.eval({inp: batch})
 
     .. py:attribute:: roots
        type: dict

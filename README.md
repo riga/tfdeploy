@@ -140,9 +140,9 @@ When writing new ops, three things are important:
 
 ## Performance
 
-tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal operations are nearly overhead-free. Math/array operations use numpy vectorization.
+tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal evaluation calls have only very few overhead and tensor operations use numpy vectorization. The actual performance depends on the ops in your graph. While most of the tensorflow ops have a numpy equivalent or can be constructed from numpy functions, a few ops require additional Python-based loops (e.g. ``BatchMatMul``). But in many cases it's potentially faster than using tensorflow's ``Tensor.eval``.
 
-iPython shell:
+This is a comparison for a basic graph where all ops are vectorized (basically ``Add``, ``MatMul`` and ``Softmax``):
 
 ```bash
 > ipython -i tests/perf.py

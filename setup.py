@@ -48,5 +48,5 @@ setup(
     keywords         = keywords,
     classifiers      = classifiers,
     long_description = long_description,
-    package_data     = {"": ["LICENSE"]}
+    data_files       = ["LICENSE", "requirements.txt"]
 )

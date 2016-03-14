@@ -13,7 +13,7 @@ import tfdeploy as td
 import numpy as np
 
 model = td.Model("/path/to/model.pkl")
-inp, outp = mode.get("input", "output")
+inp, outp = model.get("input", "output")
 
 batch = np.random.rand(10000, 784)
 result = outp.eval({inp: batch})

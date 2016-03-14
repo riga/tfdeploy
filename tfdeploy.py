@@ -594,6 +594,94 @@ def Slice(a, begin, size):
     return np.copy(a)[[slice(*tpl) for tpl in zip(begin, begin+size)]],
 
 
+@Operation.factory(attrs=("num_split",))
+def Split(dim, a, n):
+    """
+    Split op.
+    """
+    return tuple(np.split(np.copy(a), n, axis=dim))
+
+
+@Operation.factory
+def Tile(a, n):
+    """
+    Tile op.
+    """
+    return np.tile(a, n),
+
+
+@Operation.factory
+def Pad(a, paddings):
+    """
+    Zero padping op.
+    """
+    return np.pad(a, paddings, mode="constant", constant_values=0),
+
+
+@Operation.factory
+def Concat(dim, *inputs):
+    """
+    Concat op.
+    """
+    return np.concatenate(inputs, axis=dim),
+
+
+@Operation.factory
+def Pack(*inputs):
+    """
+    Pack op.
+    """
+    return np.asarray(inputs),
+
+
+@Operation.factory
+def Unpack(a):
+    """
+    Unpack op.
+    """
+    return tuple(a)
+
+
+@Operation.factory(attrs=("seq_dim", "batch_dim"))
+def ReverseSequence(a, seq_lengths, seq_dim, batch_dim):
+    """
+    Sequential reverse op.
+    """
+    r = np.copy(a)
+    invidxs = (len(r.shape) - 1) * [slice(None)]
+    if seq_dim < batch_dim:
+        invidxs[seq_dim] = slice(None, None, -1)
+    else:
+        invidxs[seq_dim - 1] = slice(None, None, -1)
+    _invidxs = tuple(invidxs)
+    selidxs = len(r.shape) * [slice(None)]
+    for i, l in enumerate(seq_lengths):
+        if not l:
+            continue
+        selidxs[batch_dim] = i
+        selidxs[seq_dim] = slice(0, l)
+        _selidxs = tuple(selidxs)
+        r[_selidxs] = a[_selidxs][_invidxs]
+    return r,
+
+
+@Operation.factory
+def Reverse(a, dims):
+    """
+    Reverse op.
+    """
+    idxs = tuple(slice(None, None, -1 if dim else None) for dim in dims)
+    return np.copy(a[idxs]),
+
+
+@Operation.factory
+def Transpose(a, perm=None):
+    """
+    Transpose op.
+    """
+    return np.transpose(a, axes=perm),
+
+
 @Operation.factory(types=("Add", "BiasAdd"))
 def Add(a, b):
     """
@@ -819,14 +907,6 @@ def Diag(a):
     for idx, v in np.ndenumerate(a):
         r[2 * idx] = v
     return r,
-
-
-@Operation.factory
-def Transpose(a, perm=None):
-    """
-    Transpose op.
-    """
-    return np.transpose(a, axes=perm),
 
 
 @Operation.factory(attrs=("transpose_a", "transpose_b"))

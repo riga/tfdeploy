@@ -114,6 +114,43 @@ class OpsTestCase(TestCase):
         t = tf.slice(np.arange(3*4*8*6).reshape(3, 4, 8, 6), [1, 1, 2, 2], 4 * [2])
         self.check(t)
 
+    def test_Split(self):
+        for t in tf.split(1, 5, self.random(8, 50, 10, 2)):
+            self.check(t)
+
+    def test_Tile(self):
+        t = tf.tile(self.random(3, 4, 5), [1, 2, 3])
+        self.check(t)
+
+    def test_Pad(self):
+        t = tf.pad(self.random(3, 8, 5), [[1, 2], [2, 1], [1, 0]])
+        self.check(t)
+
+    def test_Concat(self):
+        t = tf.concat(2, self.random((3, 4, 5), (3, 4, 5)))
+        self.check(t)
+
+    def test_Pack(self):
+        t = tf.pack(self.random((3, 4, 5), (3, 4, 5)))
+        self.check(t)
+
+    def test_Unpack(self):
+        for t in tf.unpack(self.random(6, 4, 5)):
+            self.check(t)
+
+    def test_ReverseSequence(self):
+        x = self.random(3, 4, 10)
+        t = tf.reverse_sequence(x, [5, 0, 0, 8], seq_dim=2, batch_dim=1)
+        self.check(t)
+
+    def test_Reverse(self):
+        t = tf.reverse(self.random(3, 4, 10), [True, False, True])
+        self.check(t)
+
+    def test_Transpose(self):
+        t = tf.transpose(self.random(4, 3, 5), perm=[2, 0, 1])
+        self.check(t)
+
     def test_Add(self):
         t = tf.add(*self.random((3, 4), (3, 4)))
         self.check(t)
@@ -232,10 +269,6 @@ class OpsTestCase(TestCase):
 
     def test_Diag(self):
         t = tf.diag(self.random(3, 3))
-        self.check(t)
-
-    def test_Transpose(self):
-        t = tf.transpose(self.random(4, 3, 5), perm=[2, 0, 1])
         self.check(t)
 
     def test_MatMul(self):
@@ -467,7 +500,7 @@ class OpsTestCase(TestCase):
         self.check(t, comp=comp)
 
     def test_RandomCrop(self):
-        t = tf.random_crop(np.arange(3 * 4 * 8).reshape(3, 4, 8), [1, 2, 4])
+        t = tf.random_crop(self.random(3, 4, 8), [1, 2, 4])
         # compare only shape
         def comp(rtf, rtd):
             self.assertEqual(rtf.shape, rtd.shape)

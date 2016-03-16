@@ -20,7 +20,7 @@ result = outp.eval({inp: batch})
 ```
 
 
-##### Installation
+##### Installation and dependencies
 
 Via [pip](https://pypi.python.org/pypi/tfdeploy)
 
@@ -29,6 +29,8 @@ pip install tfdeploy
 ```
 
 or by simply copying the file into your project.
+
+Numpy should be installed on your system. [scipy](http://www.scipy.org/) is generally optional. Some ops use it when it's available but fall back on (possibly slower) scipy-less implementations. However, more advanced ops like TODO *require* scipy when there is no performant equivalent in numpy.
 
 
 ##### Development status
@@ -156,7 +158,7 @@ In [2]: %timeit -n 100 test_td()
 
 ## Contributing
 
-If you want to contribute with new ops and features, I'm happy to receive pull requests. Just make sure to add a new test case to ``tests/core.py`` or ``tests/ops.py`` and run it via:
+If you want to contribute with new ops and features, I'm happy to receive pull requests. Just make sure to add a new test case to ``tests/core.py`` or ``tests/ops.py`` and run them via:
 
 ```bash
 > python -m unittest tests

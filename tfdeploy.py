@@ -182,7 +182,7 @@ class TensorRegister(type):
     instances = {}
 
     def __call__(cls, tf_tensor, *args, **kwargs):
-        # simply caching
+        # simple caching
         if tf_tensor not in cls.instances:
             inst = super(TensorRegister, cls).__call__(tf_tensor, *args, **kwargs)
             cls.instances[tf_tensor] = inst
@@ -314,7 +314,7 @@ class OperationRegister(type):
         return cls
 
     def __call__(cls, tf_op, *args, **kwargs):
-        # simply caching
+        # simple caching
         if tf_op not in cls.instances:
             inst = super(OperationRegister, cls).__call__(tf_op, *args, **kwargs)
             cls.instances[tf_op] = inst
@@ -438,7 +438,8 @@ class Operation(object):
 
     def eval(self, feed_dict=None, _uuid=None):
         """ eval(feed_dict=None)
-        Returns the value of the output tensor. See :py:meth:`Tensor.eval` for more info.
+        Returns the value of all output tensors in a tuple. See :py:meth:`Tensor.eval` for more
+        info.
         """
         # set a cache uuid for this eval call
         if _uuid is None:

@@ -14,17 +14,15 @@ __license__    = "MIT"
 __status__     = "Development"
 __version__    = "0.1.9"
 
-__all__ = ["Model", "Tensor", "Operation", "UnknownOperationException",
-           "OperationMismatchException"]
+__all__ = ["Model", "Tensor", "Operation", "HAS_SCIPY", "UnknownOperationException",
+           "OperationMismatchException", "ScipyOperationException"]
 
 
+# imports for core code
 import os
 import re
 from uuid import uuid4
 from functools import reduce
-from operator import mul
-from itertools import product
-from collections import defaultdict
 
 try:
     # python 2
@@ -32,8 +30,6 @@ try:
 except ImportError:
     # python 3
     import pickle
-
-import numpy as np
 
 
 _locals = locals()
@@ -329,7 +325,6 @@ class UnknownOperationException(Exception):
     """
     An exception which is raised when trying to convert an unknown tensorflow.
     """
-    pass
 
 
 class OperationMismatchException(Exception):
@@ -337,7 +332,6 @@ class OperationMismatchException(Exception):
     An exception which is raised during instantiation of an op whose type does not match the
     underlying tensorflow op.
     """
-    pass
 
 
 @add_metaclass(OperationRegister)
@@ -491,6 +485,37 @@ class Operation(object):
             _locals[name] = Op
             return Op
         return wrapper if func is None else wrapper(func)
+
+
+# imports exclusively for ops
+from operator import mul
+from itertools import product
+from collections import defaultdict
+import numpy as np
+
+
+class ScipyOperationException(Exception):
+    """
+    An exception which is raised when trying to evaluate an op that uses scipy internally and scipy
+    is not available.
+    """
+    def __init__(self, attr):
+        msg = "trying to access 'scipy.%s', but scipy is not installed on your system, " \
+              "install scipy to use this operation" % attr
+        super(ScipyOperationException, self).__init__(msg)
+
+try:
+    import scipy as sp
+
+    HAS_SCIPY = True
+except ImportError:
+    class ScipyDummy(object):
+        def __getattr__(self, attr):
+            raise ScipyOperationException(attr)
+
+    sp = ScipyDummy()
+
+    HAS_SCIPY = False
 
 
 dtype_map = {

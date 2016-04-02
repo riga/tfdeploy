@@ -162,7 +162,7 @@ class Model(object):
         Loads all tensors from a file defined by *path* and adds them to the root set.
         """
         path = os.path.expandvars(os.path.expanduser(path))
-        with open(path, "r") as f:
+        with open(path, "rb") as f:
             roots = pickle.load(f)
 
         for key, tensor in roots.items():
@@ -173,7 +173,7 @@ class Model(object):
         Saves all tensors of the root set to a file defined by *path*.
         """
         path = os.path.expandvars(os.path.expanduser(path))
-        with open(path, "w") as f:
+        with open(path, "wb") as f:
             pickle.dump(self.roots, f)
 
 

@@ -147,10 +147,10 @@ Most ops are written using pure numpy. However, multiple implementations of the 
 For example, numpy does not provide a vectorized *lgamma* function. Thus, the standard ``tfdeploy.Lgamma`` op uses ``math.lgamma`` that was previously vectorized using ``numpy.vectorize``. For these situations, additional implementations of the same op are possible (the *lgamma* example is quite academic, but this definitely makes sense for more sophisticated ops like pooling). We can simply tell the op to use its scipy implementation instead:
 
 ```python
-td.Lgamma.use_impl(td.Operation.IMPL_SP)
+td.Lgamma.use_impl(td.Operation.IMPL_SCIPY)
 ```
 
-Allowed implementation types are numpy (``IMPL_NP``, the default), scipy (``IMPL_SP``), and tensorflow itself (``IMPL_TF``). Currently, there are no ops that implement the latter. However, it might be useful for future purposes.
+Allowed implementation types are numpy (``IMPL_NUMPY``, the default), scipy (``IMPL_SCIPY``), theano (``IMPL_THEANO``), and tensorflow itself (``IMPL_TENSORFLOW``). Currently, there are no ops that implement the latter. However, it might be useful for future purposes.
 
 
 ##### Adding additional implementations
@@ -166,7 +166,7 @@ def Lgamma(a):
     return lgamma_vec(a),
 
 # add a scipy-based implementation
-@Lgamma.add_impl(Operation.IMPL_SP)
+@Lgamma.add_impl(Operation.IMPL_SCIPY)
 def Lgamma(a):
     return sp.special.gammaln(a),
 ```
@@ -177,12 +177,10 @@ def Lgamma(a):
 If scipy is available on your system, it is reasonable to use all ops in their scipy implementation (if it exists, of course):
 
 ```python
-td.optimize(td.Operation.IMPL_SP)
+td.optimize(td.Operation.IMPL_SCIPY)
 ```
 
-Ops that do not implement ``IMPL_SP`` stick with the numpy version (``IMPL_NP``). 
-
-
+Ops that do not implement ``IMPL_SCIPY`` stick with the numpy version (``IMPL_NUMPY``). 
 
 
 ## Performance

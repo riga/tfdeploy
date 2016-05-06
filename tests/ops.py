@@ -7,7 +7,7 @@ from .base import TestCase, tfdeploy as td
 import tensorflow as tf
 
 
-__all__ = ["OpsTestCase"]
+__all__ = ["OpsTestCase", "ScipyOpsTestCase", "TensorflowOpsTestCase"]
 
 
 # get device from env
@@ -541,3 +541,27 @@ class OpsTestCase(TestCase):
     def test_Softmax(self):
         t = tf.nn.softmax(self.random(10, 5))
         self.check(t)
+
+
+def factory(name, impl):
+    classdict = {}
+
+    def make_test_func(op):
+        def test_func(self):
+            op.use_impl(impl)
+            getattr(OpsTestCase, test_name)(self)
+        return test_func
+
+    for op in td.Operation.__subclasses__():
+        test_name = "test_" + op.__name__
+        if impl in op.impls:
+            test_func = make_test_func(op)
+        else:
+            test_func = None
+        classdict[test_name] = test_func
+
+    return OpsTestCase.__class__(name, (OpsTestCase,), classdict)
+
+
+ScipyOpsTestCase = factory("ScipyOpsTestCase", td.IMPL_SP)
+TensorflowOpsTestCase = factory("TensorflowOpsTestCase", td.IMPL_TF)

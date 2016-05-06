@@ -563,5 +563,6 @@ def factory(name, impl):
     return OpsTestCase.__class__(name, (OpsTestCase,), classdict)
 
 
-ScipyOpsTestCase = factory("ScipyOpsTestCase", td.IMPL_SP)
-TensorflowOpsTestCase = factory("TensorflowOpsTestCase", td.IMPL_TF)
+ScipyOpsTestCase = factory("ScipyOpsTestCase", td.IMPL_SCIPY)
+TheanoOpsTestCase = factory("TheanoOpsTestCase", td.IMPL_THEANO)
+TensorflowOpsTestCase = factory("TensorflowOpsTestCase", td.IMPL_TENSORFLOW)

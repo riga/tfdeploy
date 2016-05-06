@@ -16,8 +16,8 @@ __version__    = "0.1.9"
 
 __all__ = ["Model", "Tensor", "Operation", "UnknownOperationException",
            "OperationMismatchException", "InvalidImplementationException",
-           "UnknownImplementationException", "ScipyOperationException",
-           "TensorflowOperationException", "HAS_SP", "HAS_TF"]
+           "UnknownImplementationException", "ScipyOperationException", "TheanoOperationException",
+           "TensorflowOperationException", "HAS_SCIPY", "HAS_THEANO", "HAS_TENSORFLOW"]
 
 
 # imports for core code
@@ -51,10 +51,11 @@ def add_metaclass(metaclass):
 
 
 # implementation types
-IMPL_NP = "np" # numpy
-IMPL_SP = "sp" # scipy
-IMPL_TF = "tf" # tensorflow
-IMPLS = (IMPL_NP, IMPL_SP, IMPL_TF)
+IMPL_NUMPY = "numpy"
+IMPL_SCIPY = "scipy"
+IMPL_THEANO = "theano"
+IMPL_TENSORFLOW = "tensorflow"
+IMPLS = (IMPL_NUMPY, IMPL_SCIPY, IMPL_THEANO, IMPL_TENSORFLOW)
 
 
 class Model(object):
@@ -335,7 +336,7 @@ class Operation(object):
     .. code-block:: python
 
        # tell SomeOp to use the scipy implementation of its op logic
-       SomeOp.use_impl(IMPL_SP)
+       SomeOp.use_impl(IMPL_SCIPY)
 
     See :py:func:`add_impl` for more info about adding new implementations.
 
@@ -464,39 +465,48 @@ class Operation(object):
         implementation-specific version which is determined using *impl*. Overwrite this method in
         inheriting classes to disable this feature. Must return a tuple.
         """
-        if cls.impl == IMPL_NP:
-            return cls.func_np(*args)
-        elif cls.impl == IMPL_SP:
-            return cls.func_sp(*args)
-        elif cls.impl == IMPL_TF:
-            return cls.func_tf(*args)
+        if cls.impl == IMPL_NUMPY:
+            return cls.func_numpy(*args)
+        elif cls.impl == IMPL_SCIPY:
+            return cls.func_scipy(*args)
+        elif cls.impl == IMPL_THEANO:
+            return cls.func_theano(*args)
+        elif cls.impl == IMPL_TENSORFLOW:
+            return cls.func_tensorflow(*args)
         else:
             raise InvalidImplementationException(cls.impl)
 
     @staticmethod
-    def func_np(*args):
+    def func_numpy(*args):
         """
         Numpy implementation of the op logic. Returns a tuple.
         """
         raise NotImplementedError
 
     @staticmethod
-    def func_sp(*args):
+    def func_scipy(*args):
         """
         Scipy implementation of the op logic. Returns a tuple.
         """
         raise NotImplementedError
 
     @staticmethod
-    def func_tf(*args):
+    def func_theano(*args):
+        """
+        Theano implementation of the op logic. Returns a tuple.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def func_tensorflow(*args):
         """
         Tensorflow implementation of the op logic. Returns a tuple.
         """
         raise NotImplementedError
 
     @classmethod
-    def factory(cls, func=None, impl=IMPL_NP, **kwargs):
-        """ factory(func=None, impl=IMPL_NP, **kwargs)
+    def factory(cls, func=None, impl=IMPL_NUMPY, **kwargs):
+        """ factory(func=None, impl=IMPL_NUMPY, **kwargs)
         Returns a new op class whose static function will be set to *func*. The name of *func* will
         also be the op class name. *impl* is the default implementation type of the op. *kwargs* are
         used to update the class dict of the newly created op class.
@@ -541,10 +551,10 @@ class Operation(object):
            def MyAddOp(a, b):
                return np.add(a, b),
 
-           # also add a tensorflow implementation
-           @MyAddOp.add_impl(IMPL_TF)
+           # also add a theano implementation
+           @MyAddOp.add_impl(IMPL_THEANO)
            def MyAddOp(a, b):
-               return tf.add(a, b),
+               return theano.tensor.add(a, b).eval(),
         """
         if impl not in IMPLS:
             raise InvalidImplementationException(impl)
@@ -621,6 +631,17 @@ class ScipyOperationException(Exception):
         super(ScipyOperationException, self).__init__(msg)
 
 
+class TheanoOperationException(Exception):
+    """
+    An exception which is raised when trying to evaluate an op that uses theano internally and
+    theano is not available.
+    """
+    def __init__(self, attr):
+        msg = "trying to access 'theano.%s', but theano is not installed on your system, " \
+              "install theano to use this operation or use an other implementation" % attr
+        super(TheanoOperationException, self).__init__(msg)
+
+
 class TensorflowOperationException(Exception):
     """
     An exception which is raised when trying to evaluate an op that uses tensorflow internally and
@@ -644,24 +665,35 @@ import numpy as np
 try:
     import scipy as sp
     import scipy.special
-    HAS_SP = True
+    HAS_SCIPY = True
 except ImportError:
     class ScipyDummy(object):
         def __getattr__(self, attr):
             raise ScipyOperationException(attr)
     sp = ScipyDummy()
-    HAS_SP = False
+    HAS_SCIPY = False
+
+# optional import of theano
+try:
+    import theano
+    HAS_THEANO = True
+except ImportError:
+    class TheanoDummy(object):
+        def __getattr__(self, attr):
+            raise TheanoOperationException(attr)
+    theano = TheanoDummy()
+    HAS_THEANO = False
 
 # optional import of tensorflow
 try:
     import tensorflow as tf
-    HAS_TF = True
+    HAS_TENSORFLOW = True
 except ImportError:
     class TensorflowDummy(object):
         def __getattr__(self, attr):
             raise TensorflowOperationException(attr)
     tf = TensorflowDummy()
-    HAS_TF = False
+    HAS_TENSORFLOW = False
 
 
 # mapping of tf dtypes to np dtypes
@@ -1066,7 +1098,7 @@ def Lgamma(a):
     """
     return lgamma_vec(a),
 
-@Lgamma.add_impl(IMPL_SP)
+@Lgamma.add_impl(IMPL_SCIPY)
 def Lgamma(a):
     return sp.special.gammaln(a),
 
@@ -1078,7 +1110,7 @@ def Erf(a):
     """
     return erf_vec(a),
 
-@Erf.add_impl(IMPL_SP)
+@Erf.add_impl(IMPL_SCIPY)
 def Erf(a):
     return sp.special.erf(a),
 
@@ -1090,7 +1122,7 @@ def Erfc(a):
     """
     return erfc_vec(a),
 
-@Erfc.add_impl(IMPL_SP)
+@Erfc.add_impl(IMPL_SCIPY)
 def Erfc(a):
     return sp.special.erfc(a),
 

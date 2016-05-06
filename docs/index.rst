@@ -50,23 +50,31 @@ Functions
 Other Attributes
 ^^^^^^^^^^^^^^^^
 
-.. py:attribute:: IMPL_NP
+.. py:attribute:: IMPL_NUMPY
 
    Implementation type for ops that merely rely on numpy (the default).
 
-.. py:attribute:: IMPL_SP
+.. py:attribute:: IMPL_SCIPY
 
    Implementation type for ops that also use scipy.
 
-.. py:attribute:: IMPL_TF
+.. py:attribute:: IMPL_THEANO
+
+   Implementation type for ops that also use theano.
+
+.. py:attribute:: IMPL_TENSORFLOW
 
    Implementation type for ops that also use tensorflow.
 
-.. py:attribute:: HAS_SP
+.. py:attribute:: HAS_SCIPY
 
    A flag that is *True* when scipy is available on your system.
 
-.. py:attribute:: HAS_TF
+.. py:attribute:: HAS_THEANO
+
+   A flag that is *True* when theano is available on your system.
+
+.. py:attribute:: HAS_TENSORFLOW
 
    A flag that is *True* when tensorflow is available on your system.
 

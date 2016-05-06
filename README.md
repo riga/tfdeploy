@@ -30,7 +30,7 @@ pip install tfdeploy
 
 or by simply copying the file into your project.
 
-Numpy should be installed on your system. [scipy](http://www.scipy.org/) is generally optional. Some ops use it when it's available but fall back on (possibly slower) scipy-less implementations. However, more advanced ops like TODO *require* scipy when there is no performant equivalent in numpy.
+Numpy should be installed on your system. [scipy](http://www.scipy.org/) and tensorflow itself are optional. See [optimazation](#optimization) for more info on optional packages.
 
 
 ##### Development status
@@ -138,6 +138,51 @@ When writing new ops, three things are important:
 - Try to avoid loops, prefer numpy vectorization.
 - Return a tuple.
 - Don't change incoming tensors/arrays in-place, always work on and return copies.
+
+
+## Optimization
+
+Most ops are written using pure numpy. However, multiple implementations of the same op are allowed that may use additional third-party Python packages providing even faster functionality for some situations.
+
+For example, numpy does not provide a vectorized *lgamma* function. Thus, the standard ``tfdeploy.Lgamma`` op uses ``math.lgamma`` that was previously vectorized using ``numpy.vectorize``. For these situations, additional implementations of the same op are possible (the *lgamma* example is quite academic, but this definitely makes sense for more sophisticated ops like pooling). We can simply tell the op to use its scipy implementation instead:
+
+```python
+td.Lgamma.use_impl(td.Operation.IMPL_SP)
+```
+
+Allowed implementation types are numpy (``IMPL_NP``, the default), scipy (``IMPL_SP``), and tensorflow itself (``IMPL_TF``). Currently, there are no ops that implement the latter. However, it might be useful for future purposes.
+
+
+##### Adding additional implementations
+
+Additional implementations can be added using the ``add_impl`` decorator of existing operations.
+
+```python
+# create the default lgamma op with numpy implementation
+lgamma_vec = np.vectorize(math.lgamma)
+
+@Operation.factory
+def Lgamma(a):
+    return lgamma_vec(a),
+
+# add a scipy-based implementation
+@Lgamma.add_impl(Operation.IMPL_SP)
+def Lgamma(a):
+    return sp.special.gammaln(a),
+```
+
+
+##### Auto-optimization
+
+If scipy is available on your system, it is reasonable to use all ops in their scipy implementation (if it exists, of course):
+
+```python
+td.optimize(td.Operation.IMPL_SP)
+```
+
+Ops that do not implement ``IMPL_SP`` stick with the numpy version (``IMPL_NP``). 
+
+
 
 
 ## Performance

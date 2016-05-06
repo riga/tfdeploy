@@ -14,8 +14,10 @@ __license__    = "MIT"
 __status__     = "Development"
 __version__    = "0.1.9"
 
-__all__ = ["Model", "Tensor", "Operation", "HAS_SCIPY", "UnknownOperationException",
-           "OperationMismatchException", "ScipyOperationException"]
+__all__ = ["Model", "Tensor", "Operation", "UnknownOperationException",
+           "OperationMismatchException", "InvalidImplementationException",
+           "UnknownImplementationException", "ScipyOperationException",
+           "TensorflowOperationException", "HAS_SP", "HAS_TF"]
 
 
 # imports for core code
@@ -32,9 +34,6 @@ except ImportError:
     import pickle
 
 
-_locals = locals()
-
-
 # metaclass decorator from six package, credits to Benjamin Peterson
 def add_metaclass(metaclass):
     def wrapper(cls):
@@ -49,6 +48,13 @@ def add_metaclass(metaclass):
         orig_vars.pop("__weakref__", None)
         return metaclass(cls.__name__, cls.__bases__, orig_vars)
     return wrapper
+
+
+# implementation types
+IMPL_NP = "np" # numpy
+IMPL_SP = "sp" # scipy
+IMPL_TF = "tf" # tensorflow
+IMPLS = (IMPL_NP, IMPL_SP, IMPL_TF)
 
 
 class Model(object):
@@ -90,9 +96,8 @@ class Model(object):
        result = outp.eval({inp: batch})
 
     .. py:attribute:: roots
-       type: dict
 
-       Contained root tensors mapped to a key.
+       Contained root tensors in a dict mapped to a key.
     """
 
     value_index_cre = re.compile("\:\d+$")
@@ -198,23 +203,19 @@ class Tensor(object):
     tensor's current value.
 
     .. py:attribute:: name
-       type: string
 
        The name of the tensor.
 
     .. py:attribute:: value_index
-       type: int
 
-       The value index of this tensor, i.e., the position in the op's output list.
+       The integer value index of this tensor, i.e., the position in the op's output list.
 
     .. py:attribute:: op
-       type: None, Operation
 
        The op instance that defines the value of this tensor. When created from a
        ``tensorflow.Placeholder`` or a ``tensorflow.Variable``, op will be *None*.
 
     .. py:attribute:: value
-       type: None, numpy.ndarray
 
        The value of this tensor. When created from a ``tensorflow.Variable``, this will be the value
        of that variable, or *None* otherwise until it is evaluated the first time.
@@ -321,62 +322,55 @@ class OperationRegister(type):
         return cls.instances[tf_op]
 
 
-class UnknownOperationException(Exception):
-    """
-    An exception which is raised when trying to convert an unknown tensorflow.
-    """
-
-
-class OperationMismatchException(Exception):
-    """
-    An exception which is raised during instantiation of an op whose type does not match the
-    underlying tensorflow op.
-    """
-
-
 @add_metaclass(OperationRegister)
 class Operation(object):
     """
     Building block of a model. In *graph* terms, operations (ops) represent nodes that are connected
     via tensors. It contains information on its input tensors. The conversion uses the
     (tensorflow) instance *tf_op*, all *args* and *kwargs* are forwarded to the :py:class:`Tensor`
-    constructor for this op's input tensors.
+    constructor for this op's input tensors. Op instances can have multiple implementations, i.e.,
+    different methods that lead to equivalent results but might use additional third-party software
+    such as *scipy*. To select a specific implementation, invoke :py:func:`use_impl`:
+
+    .. code-block:: python
+
+       # tell SomeOp to use the scipy implementation of its op logic
+       SomeOp.use_impl(IMPL_SP)
+
+    See :py:func:`add_impl` for more info about adding new implementations.
 
     .. py:attribute:: types
-       type: tuple
        classmember
 
-       The types of tensorflow ops that this op can represent.
+       A tuple containing the types of tensorflow ops that this op can represent.
 
     .. py:attribute:: unpack
-       type: bool
        classmember
 
        If *True* (default), the values of evaluated input tensors are forwarded to *func* as single
        arguments, or, otherwise, as a list.
 
     .. py:attribute:: attrs
-       type: tuple
        classmember
 
-       Names of the configuration attributes of the original tensorflow op.
+       Names of the configuration attributes of the original tensorflow op in a tuple.
 
     .. py:attribute:: name
-       type: string
 
        The name of the op.
 
     .. py:attribute:: inputs
-       type: tuple
 
-       Tensors that are input to this op. Their order is important as they are forwarded to *func*
-       for evaluation.
+       Tuple of tensors that are input to this op. Their order is important as they are forwarded to
+       *func* for evaluation.
 
     .. py:attribute:: kwargs
-       type: list
 
        Keyword arguments containing configuration values that will be passed to *func*.
     """
+
+    impl = None
+    impls = []
 
     types = ()
     unpack = True
@@ -463,36 +457,157 @@ class Operation(object):
 
         return self.value
 
+    @classmethod
+    def func(cls, *args):
+        """
+        The actual op logic. By default, the method call is forwareded to the
+        implementation-specific version which is determined using *impl*. Overwrite this method in
+        inheriting classes to disable this feature. Must return a tuple.
+        """
+        if cls.impl == IMPL_NP:
+            return cls.func_np(*args)
+        elif cls.impl == IMPL_SP:
+            return cls.func_sp(*args)
+        elif cls.impl == IMPL_TF:
+            return cls.func_tf(*args)
+        else:
+            raise InvalidImplementationException(cls.impl)
+
     @staticmethod
-    def func():
-        """ func(*args)
-        The actual op logic. Must be implemented in inheriting classes. All input tensors are
-        forwarded to this method for evaluation. Should return a tuple.
+    def func_np(*args):
+        """
+        Numpy implementation of the op logic. Returns a tuple.
         """
         raise NotImplementedError
 
     @staticmethod
-    def factory(func=None, **kwargs):
+    def func_sp(*args):
         """
+        Scipy implementation of the op logic. Returns a tuple.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def func_tf(*args):
+        """
+        Tensorflow implementation of the op logic. Returns a tuple.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def factory(cls, func=None, impl=IMPL_NP, **kwargs):
+        """ factory(func=None, impl=IMPL_NP, **kwargs)
         Returns a new op class whose static function will be set to *func*. The name of *func* will
-        also be the op class name.
+        also be the op class name. *impl* is the default implementation type of the op. *kwargs* are
+        used to update the class dict of the newly created op class.
         """
+        if impl not in IMPLS:
+            raise InvalidImplementationException(impl)
+
         def wrapper(func):
-            name = func.__name__
-            classdict = {"func": staticmethod(func)}
+            classdict = {"impls": [], "func_" + impl: staticmethod(func)}
             classdict.update(kwargs)
-            Op = Operation.__class__(name, (Operation,), classdict)
-            Op.__doc__ = func.__doc__
-            _locals[name] = Op
-            return Op
+
+            cls = Operation.__class__(func.__name__, (Operation,), classdict)
+            cls.__doc__ = func.__doc__
+            cls.impls.append(impl) 
+            cls.use_impl(impl)
+
+            return cls
+
         return wrapper if func is None else wrapper(func)
 
+    @classmethod
+    def use_impl(cls, impl):
+        """
+        Switches the implementation type to *impl*. Returns the previous type.
+        """
+        if impl not in cls.impls:
+            raise UnknownImplementationException(impl + str(cls.impls) + str(cls))
 
-# imports exclusively for ops
-from operator import mul
-from itertools import product
-from collections import defaultdict
-import numpy as np
+        prev = cls.impl
+        cls.impl = impl
+        return prev
+
+    @classmethod
+    def add_impl(cls, impl):
+        """
+        Decorator to add an additional implementation to this op. Example:
+
+        .. code-block:: python
+
+           # initial implementation using factory, defaults to numpy
+           @Operation.factory
+           def MyAddOp(a, b):
+               return np.add(a, b),
+
+           # also add a tensorflow implementation
+           @MyAddOp.add_impl(IMPL_TF)
+           def MyAddOp(a, b):
+               return tf.add(a, b),
+        """
+        if impl not in IMPLS:
+            raise InvalidImplementationException(impl)
+
+        def wrapper(func):
+            setattr(cls, "func_" + impl, staticmethod(func))
+            if impl not in cls.impls:
+                cls.impls.append(impl)
+            return cls
+
+        return wrapper
+
+
+def optimize(order):
+    """ optimize(impl)
+    Tries to set the implementation type of all registered :py:class:`Operation` classes to *impl*.
+    This has no effect when an op does not implement that type.
+
+    The behavior is equivalent to:
+
+    .. code-block:: python
+
+       for op in Operation.__subclasses__():
+           if impl in op.impls:
+               op.use_impl(impl)
+
+    *impl* can also be a list or tuple of valid implementation types representing a preferred order.
+    """
+    if isinstance(order, str):
+        order = [order]
+
+    for op in Operation.__subclasses__():
+        for impl in order:
+            if impl in op.impls:
+                op.use_impl(impl)
+                break
+
+
+class UnknownOperationException(Exception):
+    """
+    An exception which is raised when trying to convert an unknown tensorflow.
+    """
+
+
+class OperationMismatchException(Exception):
+    """
+    An exception which is raised during instantiation of an op whose type does not match the
+    underlying tensorflow op.
+    """
+
+
+class InvalidImplementationException(Exception):
+    """
+    An exception which is raised when an implementation of an unknown type is registered for an
+    :py:class:`Operation` class.
+    """
+
+
+class UnknownImplementationException(Exception):
+    """
+    An exception which is raised when an :py:class:`Operation` instance is requested to use an
+    implementation type that was not yet added.
+    """
 
 
 class ScipyOperationException(Exception):
@@ -502,23 +617,54 @@ class ScipyOperationException(Exception):
     """
     def __init__(self, attr):
         msg = "trying to access 'scipy.%s', but scipy is not installed on your system, " \
-              "install scipy to use this operation" % attr
+              "install scipy to use this operation or use an other implementation" % attr
         super(ScipyOperationException, self).__init__(msg)
 
+
+class TensorflowOperationException(Exception):
+    """
+    An exception which is raised when trying to evaluate an op that uses tensorflow internally and
+    tensorflow is not available.
+    """
+    def __init__(self, attr):
+        msg = "trying to access 'tensorflow.%s', but tensorflow is not installed on your system, " \
+              "install tensorflow to use this operation or use an other implementation" % attr
+        super(TensorflowOperationException, self).__init__(msg)
+
+
+# imports exclusively for ops
+from operator import mul
+from itertools import product
+from collections import defaultdict
+
+# third-party imports
+import numpy as np
+
+# optional import of scipy
 try:
     import scipy as sp
-
-    HAS_SCIPY = True
+    import scipy.special
+    HAS_SP = True
 except ImportError:
     class ScipyDummy(object):
         def __getattr__(self, attr):
             raise ScipyOperationException(attr)
-
     sp = ScipyDummy()
+    HAS_SP = False
 
-    HAS_SCIPY = False
+# optional import of tensorflow
+try:
+    import tensorflow as tf
+    HAS_TF = True
+except ImportError:
+    class TensorflowDummy(object):
+        def __getattr__(self, attr):
+            raise TensorflowOperationException(attr)
+    tf = TensorflowDummy()
+    HAS_TF = False
 
 
+# mapping of tf dtypes to np dtypes
 dtype_map = {
     1: np.float32,
     2: np.float64,
@@ -920,6 +1066,10 @@ def Lgamma(a):
     """
     return lgamma_vec(a),
 
+@Lgamma.add_impl(IMPL_SP)
+def Lgamma(a):
+    return sp.special.gammaln(a),
+
 
 @Operation.factory
 def Erf(a):
@@ -928,6 +1078,10 @@ def Erf(a):
     """
     return erf_vec(a),
 
+@Erf.add_impl(IMPL_SP)
+def Erf(a):
+    return sp.special.erf(a),
+
 
 @Operation.factory
 def Erfc(a):
@@ -935,6 +1089,10 @@ def Erfc(a):
     Complementary gaussian error function op.
     """
     return erfc_vec(a),
+
+@Erfc.add_impl(IMPL_SP)
+def Erfc(a):
+    return sp.special.erfc(a),
 
 
 @Operation.factory

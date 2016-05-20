@@ -23,7 +23,7 @@ matrix:
 install:
   - pip install numpy
   - if [ "$TD_TEST_SCIPY" = "1" ]; then
-      sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran;
+      sudo apt-get -y install libblas-dev liblapack-dev libatlas-base-dev gfortran;
       pip install scipy;
     fi
   - if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then

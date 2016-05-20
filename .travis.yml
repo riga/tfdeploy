@@ -6,19 +6,32 @@ matrix:
     - os: linux
       dist: trusty
       python: "2.7"
+      env: TD_TEST_SCIPY=0
     - os: linux
       dist: trusty
       python: "3.5"
+      env: TD_TEST_SCIPY=0
+    - os: linux
+      dist: trusty
+      python: "2.7"
+      env: TD_TEST_SCIPY=1
+    - os: linux
+      dist: trusty
+      python: "3.5"
+      env: TD_TEST_SCIPY=1
 
 install:
   - pip install numpy
+  - if [ "$TD_TEST_SCIPY" = "1" ]; then
+      pip install scipy
+    fi
   - if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.7.1-cp27-none-linux_x86_64.whl;
+      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp27-none-linux_x86_64.whl;
     fi
   - if [ "$TRAVIS_PYTHON_VERSION" = "3.5" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      wget https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.7.1-cp34-none-linux_x86_64.whl;
-      mv tensorflow-0.7.1-cp34-none-linux_x86_64.whl tensorflow-0.7.1-cp35-none-linux_x86_64.whl;
-      pip3 install tensorflow-0.7.1-cp35-none-linux_x86_64.whl;
+      wget https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp34-cp34m-linux_x86_64.whl;
+      mv tensorflow-0.8.0-cp34-cp34m-linux_x86_64.whl tensorflow-0.8.0-cp35-cp35m-linux_x86_64.whl;
+      pip3 install tensorflow-0.8.0-cp35-cp35m-linux_x86_64.whl;
     fi
 
 script: python -m unittest tests

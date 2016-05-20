@@ -18,6 +18,11 @@ if os.environ.get("TD_TEST_GPU", "").lower() in ("1", "yes", "true"):
 DEVICE_ID = "/%s:0" % ["cpu", "gpu"][DEVICE]
 
 
+# optimize for scipy depending on env
+if os.environ.get("TD_TEST_SCIPY", "").lower() in ("1", "yes", "true"):
+    td.optimize(td.IMPL_SCIPY)
+
+
 class OpsTestCase(TestCase):
 
     def __init__(self, *args, **kwargs):

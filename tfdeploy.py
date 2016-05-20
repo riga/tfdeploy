@@ -16,8 +16,7 @@ __version__    = "0.1.9"
 
 __all__ = ["Model", "Tensor", "Operation", "UnknownOperationException",
            "OperationMismatchException", "InvalidImplementationException",
-           "UnknownImplementationException", "ScipyOperationException", "TheanoOperationException",
-           "TensorflowOperationException", "HAS_SCIPY", "HAS_THEANO", "HAS_TENSORFLOW"]
+           "UnknownImplementationException", "ScipyOperationException", "HAS_SCIPY"]
 
 
 # imports for core code
@@ -48,14 +47,6 @@ def add_metaclass(metaclass):
         orig_vars.pop("__weakref__", None)
         return metaclass(cls.__name__, cls.__bases__, orig_vars)
     return wrapper
-
-
-# implementation types
-IMPL_NUMPY = "numpy"
-IMPL_SCIPY = "scipy"
-IMPL_THEANO = "theano"
-IMPL_TENSORFLOW = "tensorflow"
-IMPLS = (IMPL_NUMPY, IMPL_SCIPY, IMPL_THEANO, IMPL_TENSORFLOW)
 
 
 class Model(object):
@@ -323,6 +314,12 @@ class OperationRegister(type):
         return cls.instances[tf_op]
 
 
+# implementation types
+IMPL_NUMPY = "numpy"
+IMPL_SCIPY = "scipy"
+IMPLS = (IMPL_NUMPY, IMPL_SCIPY)
+
+
 @add_metaclass(OperationRegister)
 class Operation(object):
     """
@@ -469,10 +466,6 @@ class Operation(object):
             return cls.func_numpy(*args)
         elif cls.impl == IMPL_SCIPY:
             return cls.func_scipy(*args)
-        elif cls.impl == IMPL_THEANO:
-            return cls.func_theano(*args)
-        elif cls.impl == IMPL_TENSORFLOW:
-            return cls.func_tensorflow(*args)
         else:
             raise InvalidImplementationException(cls.impl)
 
@@ -487,20 +480,6 @@ class Operation(object):
     def func_scipy(*args):
         """
         Scipy implementation of the op logic. Returns a tuple.
-        """
-        raise NotImplementedError
-
-    @staticmethod
-    def func_theano(*args):
-        """
-        Theano implementation of the op logic. Returns a tuple.
-        """
-        raise NotImplementedError
-
-    @staticmethod
-    def func_tensorflow(*args):
-        """
-        Tensorflow implementation of the op logic. Returns a tuple.
         """
         raise NotImplementedError
 
@@ -631,28 +610,6 @@ class ScipyOperationException(Exception):
         super(ScipyOperationException, self).__init__(msg)
 
 
-class TheanoOperationException(Exception):
-    """
-    An exception which is raised when trying to evaluate an op that uses theano internally and
-    theano is not available.
-    """
-    def __init__(self, attr):
-        msg = "trying to access 'theano.%s', but theano is not installed on your system, " \
-              "install theano to use this operation or use an other implementation" % attr
-        super(TheanoOperationException, self).__init__(msg)
-
-
-class TensorflowOperationException(Exception):
-    """
-    An exception which is raised when trying to evaluate an op that uses tensorflow internally and
-    tensorflow is not available.
-    """
-    def __init__(self, attr):
-        msg = "trying to access 'tensorflow.%s', but tensorflow is not installed on your system, " \
-              "install tensorflow to use this operation or use an other implementation" % attr
-        super(TensorflowOperationException, self).__init__(msg)
-
-
 # imports exclusively for ops
 from operator import mul
 from itertools import product
@@ -672,28 +629,6 @@ except ImportError:
             raise ScipyOperationException(attr)
     sp = ScipyDummy()
     HAS_SCIPY = False
-
-# optional import of theano
-try:
-    import theano
-    HAS_THEANO = True
-except ImportError:
-    class TheanoDummy(object):
-        def __getattr__(self, attr):
-            raise TheanoOperationException(attr)
-    theano = TheanoDummy()
-    HAS_THEANO = False
-
-# optional import of tensorflow
-try:
-    import tensorflow as tf
-    HAS_TENSORFLOW = True
-except ImportError:
-    class TensorflowDummy(object):
-        def __getattr__(self, attr):
-            raise TensorflowOperationException(attr)
-    tf = TensorflowDummy()
-    HAS_TENSORFLOW = False
 
 
 # mapping of tf dtypes to np dtypes

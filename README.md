@@ -35,7 +35,7 @@ Numpy should be installed on your system. [scipy](http://www.scipy.org/) is opti
 
 ##### Development status
 
-Currently, all math ops and a selection of nn ops are implemented. The remaining ops are about to follow, so there might be some  ``UnknownOperationException``'s during conversion. See [milestone v0.2.0](https://github.com/riga/tfdeploy/milestones/v0.2.0). 
+Currently, all math ops and a selection of nn ops are implemented. The remaining ops are about to follow, so there might be some  ``UnknownOperationException``'s during conversion. See [milestone v0.3.0](https://github.com/riga/tfdeploy/milestones/v0.3.0).
 
 
 ## Why?

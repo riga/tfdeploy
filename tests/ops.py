@@ -7,7 +7,7 @@ from .base import TestCase, tfdeploy as td
 import tensorflow as tf
 
 
-__all__ = ["OpsTestCase", "ScipyOpsTestCase", "TensorflowOpsTestCase"]
+__all__ = ["OpsTestCase", "ScipyOpsTestCase"]
 
 
 # get device from env
@@ -564,5 +564,3 @@ def factory(name, impl):
 
 
 ScipyOpsTestCase = factory("ScipyOpsTestCase", td.IMPL_SCIPY)
-TheanoOpsTestCase = factory("TheanoOpsTestCase", td.IMPL_THEANO)
-TensorflowOpsTestCase = factory("TensorflowOpsTestCase", td.IMPL_TENSORFLOW)

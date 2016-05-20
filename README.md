@@ -30,12 +30,12 @@ pip install tfdeploy
 
 or by simply copying the file into your project.
 
-Numpy should be installed on your system. [scipy](http://www.scipy.org/) and tensorflow itself are optional. See [optimazation](#optimization) for more info on optional packages.
+Numpy should be installed on your system. [scipy](http://www.scipy.org/) is optional. See [optimazation](#optimization) for more info on optional packages.
 
 
 ##### Development status
 
-Currently, all math ops and a selection of nn ops are implemented. The remaining ops will follow within a few days, so there might be some  ``UnknownOperationException``'s during conversion. See [milestone v0.2.0](https://github.com/riga/tfdeploy/milestones/v0.2.0). 
+Currently, all math ops and a selection of nn ops are implemented. The remaining ops are about to follow, so there might be some  ``UnknownOperationException``'s during conversion. See [milestone v0.2.0](https://github.com/riga/tfdeploy/milestones/v0.2.0). 
 
 
 ## Why?
@@ -150,18 +150,20 @@ For example, numpy does not provide a vectorized *lgamma* function. Thus, the st
 td.Lgamma.use_impl(td.Operation.IMPL_SCIPY)
 ```
 
-Allowed implementation types are numpy (``IMPL_NUMPY``, the default), scipy (``IMPL_SCIPY``), theano (``IMPL_THEANO``), and tensorflow itself (``IMPL_TENSORFLOW``). Currently, there are no ops that implement the latter. However, it might be useful for future purposes.
+Currently, allowed implementation types are numpy (``IMPL_NUMPY``, the default) and scipy (``IMPL_SCIPY``).
 
 
 ##### Adding additional implementations
 
-Additional implementations can be added using the ``add_impl`` decorator of existing operations.
+Additional implementations can be added by setting the ``impl`` attribute of the op factory or by using the ``add_impl`` decorator of existing operations. The first registered implementation will be the default one.
 
 ```python
 # create the default lgamma op with numpy implementation
 lgamma_vec = np.vectorize(math.lgamma)
 
 @Operation.factory
+# equivalent to
+# @Operation.factory(impl=IMPL_NUMPY)
 def Lgamma(a):
     return lgamma_vec(a),
 

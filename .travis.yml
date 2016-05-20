@@ -23,7 +23,7 @@ matrix:
 install:
   - pip install numpy
   - if [ "$TD_TEST_SCIPY" = "1" ]; then
-      pip install scipy
+      pip install scipy;
     fi
   - if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
       pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp27-none-linux_x86_64.whl;

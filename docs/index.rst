@@ -52,11 +52,11 @@ Other Attributes
 
 .. py:attribute:: IMPL_NUMPY
 
-   Implementation type for ops that merely rely on numpy (the default).
+   Implementation type for ops that use numpy (the default).
 
 .. py:attribute:: IMPL_SCIPY
 
-   Implementation type for ops that also use scipy.
+   Implementation type for ops that use scipy.
 
 .. py:attribute:: HAS_SCIPY
 

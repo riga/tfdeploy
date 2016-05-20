@@ -23,16 +23,16 @@ matrix:
 install:
   - pip install numpy
   - if [ "$TD_TEST_SCIPY" = "1" ]; then
-      apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran;
-      pip install scipy;
+      sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran;
+      sudo pip install scipy;
     fi
   - if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp27-none-linux_x86_64.whl;
+      sudo pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp27-none-linux_x86_64.whl;
     fi
   - if [ "$TRAVIS_PYTHON_VERSION" = "3.5" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
       wget https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp34-cp34m-linux_x86_64.whl;
       mv tensorflow-0.8.0-cp34-cp34m-linux_x86_64.whl tensorflow-0.8.0-cp35-cp35m-linux_x86_64.whl;
-      pip3 install tensorflow-0.8.0-cp35-cp35m-linux_x86_64.whl;
+      sudo pip3 install tensorflow-0.8.0-cp35-cp35m-linux_x86_64.whl;
     fi
 
 script: python -m unittest tests

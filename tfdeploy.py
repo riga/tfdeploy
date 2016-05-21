@@ -528,13 +528,15 @@ class Operation(object):
 
            # initial implementation using factory, defaults to numpy
            @Operation.factory
-           def MyAddOp(a, b):
-               return np.add(a, b),
+           def MyOp(a, b):
+               # use numpy only
+               return ...
 
-           # also add a theano implementation
-           @MyAddOp.add_impl(IMPL_THEANO)
-           def MyAddOp(a, b):
-               return theano.tensor.add(a, b).eval(),
+           # also add a scipy implementation
+           @MyOp.add_impl(IMPL_SCIPY)
+           def MyOp(a, b):
+               # also use scipy
+               return ...
         """
         if impl not in IMPLS:
             raise InvalidImplementationException(impl)

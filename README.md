@@ -147,7 +147,7 @@ Most ops are written using pure numpy. However, multiple implementations of the 
 For example, numpy does not provide a vectorized *lgamma* function. Thus, the standard ``tfdeploy.Lgamma`` op uses ``math.lgamma`` that was previously vectorized using ``numpy.vectorize``. For these situations, additional implementations of the same op are possible (the *lgamma* example is quite academic, but this definitely makes sense for more sophisticated ops like pooling). We can simply tell the op to use its scipy implementation instead:
 
 ```python
-td.Lgamma.use_impl(td.Operation.IMPL_SCIPY)
+td.Lgamma.use_impl(td.IMPL_SCIPY)
 ```
 
 Currently, allowed implementation types are numpy (``IMPL_NUMPY``, the default) and scipy (``IMPL_SCIPY``).
@@ -161,14 +161,14 @@ Additional implementations can be added by setting the ``impl`` attribute of the
 # create the default lgamma op with numpy implementation
 lgamma_vec = np.vectorize(math.lgamma)
 
-@Operation.factory
+@td.Operation.factory
 # equivalent to
-# @Operation.factory(impl=IMPL_NUMPY)
+# @td.Operation.factory(impl=td.IMPL_NUMPY)
 def Lgamma(a):
     return lgamma_vec(a),
 
 # add a scipy-based implementation
-@Lgamma.add_impl(Operation.IMPL_SCIPY)
+@Lgamma.add_impl(td.IMPL_SCIPY)
 def Lgamma(a):
     return sp.special.gammaln(a),
 ```

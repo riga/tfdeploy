@@ -16,7 +16,8 @@ __version__    = "0.2.0"
 
 __all__ = ["Model", "Tensor", "Operation", "UnknownOperationException",
            "OperationMismatchException", "InvalidImplementationException",
-           "UnknownImplementationException", "ScipyOperationException", "HAS_SCIPY"]
+           "UnknownImplementationException", "ScipyOperationException", "IMPL_NUMPY", "IMPL_SCIPY",
+           "IMPLS", "HAS_SCIPY"]
 
 
 # imports for core code

@@ -30,7 +30,7 @@ pip install tfdeploy
 
 or by simply copying the file into your project.
 
-Numpy should be installed on your system. [scipy](http://www.scipy.org/) is optional. See [optimazation](#optimization) for more info on optional packages.
+Numpy should be installed on your system. [Scipy](http://www.scipy.org/) is optional. See [optimazation](#optimization) for more info on optional packages.
 
 
 ##### Development status
@@ -179,7 +179,7 @@ def Lgamma(a):
 If scipy is available on your system, it is reasonable to use all ops in their scipy implementation (if it exists, of course):
 
 ```python
-td.optimize(td.Operation.IMPL_SCIPY)
+td.optimize(td.IMPL_SCIPY)
 ```
 
 Ops that do not implement ``IMPL_SCIPY`` stick with the numpy version (``IMPL_NUMPY``). 

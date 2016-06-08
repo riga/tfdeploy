@@ -38,6 +38,7 @@ class OpsTestCase(TestCase):
         self.ndigits = 7
 
     def check(self, t, comp=None, ndigits=None, stats=False, abs=False, debug=False):
+        self.sess.run(tf.initialize_all_variables())
         rtf = t.eval(session=self.sess)
         rtd = td.Tensor(t, self.sess).eval()
 
@@ -68,7 +69,7 @@ class OpsTestCase(TestCase):
     def random(self, *shapes, **kwargs):
         if all(isinstance(i, int) for i in shapes):
             if kwargs.get("complex", False):
-                return self.random(*shapes) + 1j * self.random(*shapes)
+                return (self.random(*shapes) + 1j * self.random(*shapes)).astype(np.complex64)
             else:
                 return np.random.rand(*shapes)
         else:
@@ -337,7 +338,7 @@ class OpsTestCase(TestCase):
         self.check(t)
 
     def test_ComplexAbs(self):
-        t = tf.complex_abs(self.random(3, 4, complex=True))
+        t = tf.complex_abs(tf.Variable(self.random(3, 4, complex=True)))
         self.check(t)
 
     def test_Conj(self):
@@ -345,11 +346,11 @@ class OpsTestCase(TestCase):
         self.check(t)
 
     def test_Imag(self):
-        t = tf.imag(self.random(3, 4, complex=True))
+        t = tf.imag(tf.Variable(self.random(3, 4, complex=True)))
         self.check(t)
 
     def test_Real(self):
-        t = tf.real(self.random(3, 4, complex=True))
+        t = tf.real(tf.Variable(self.random(3, 4, complex=True)))
         self.check(t)
 
     def test_FFT2D(self):

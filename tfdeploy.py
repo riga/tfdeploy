@@ -648,6 +648,8 @@ dtype_map = {
     10: np.bool,
     14: np.uint16,
     17: np.uint16,
+    18: np.complex128,
+    19: np.float16,
     101: np.float32,
     102: np.float64,
     103: np.int32,
@@ -659,7 +661,9 @@ dtype_map = {
     109: np.int64,
     110: np.bool,
     114: np.uint16,
-    117: np.uint16
+    117: np.uint16,
+    118: np.complex128,
+    119: np.float16
 }
 
 

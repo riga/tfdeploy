@@ -37,7 +37,7 @@ matrix:
       env: TD_TEST_SCIPY=1 TF_VERSION=0.9.0
 
 install:
-  - pip install numpy
+  - pip install numpy;
   - if [ "$TD_TEST_SCIPY" = "1" ]; then
       sudo apt-get -y install libblas-dev liblapack-dev libatlas-base-dev gfortran;
       travis_wait 30 pip install scipy;
@@ -45,7 +45,7 @@ install:
   - if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then
       if [ "$TF_VERSION" = "0.8.0" ]; then
         pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp27-none-linux_x86_64.whl;
-      fi
+      fi;
       if [ "$TF_VERSION" = "0.9.0" ]; then
         pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.9.0rc0-cp27-none-linux_x86_64.whl;
       fi;

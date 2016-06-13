@@ -47,7 +47,7 @@ However, when it comes down to model deployment and evaluation, things get a bit
 To boil it down, tfdeploy
 
 - is lightweight. A single file with < 150 lines of core code. Just copy it to your project.
-- [faster](#performance) then using tensorflow's ``Tensor.eval``.
+- [faster](#performance) than using tensorflow's ``Tensor.eval``.
 - **does not need tensorflow** during evaluation.
 - only depends on numpy.
 - can load one or more models from a single file.

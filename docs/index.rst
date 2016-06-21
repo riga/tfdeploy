@@ -41,6 +41,12 @@ Classes
 Functions
 ^^^^^^^^^
 
+``reset``
+---------
+
+.. autofunction:: reset
+
+
 ``optimize``
 ------------
 

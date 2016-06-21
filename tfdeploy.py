@@ -12,7 +12,7 @@ __credits__    = ["Marcel Rieger", "Benjamin Fischer"]
 __contact__    = "https://github.com/riga/tfdeploy"
 __license__    = "MIT"
 __status__     = "Development"
-__version__    = "0.2.1"
+__version__    = "0.2.2"
 
 __all__ = ["Model", "Tensor", "Operation", "reset", "optimize", "UnknownOperationException",
            "OperationMismatchException", "InvalidImplementationException",

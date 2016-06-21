@@ -14,7 +14,7 @@ __license__    = "MIT"
 __status__     = "Development"
 __version__    = "0.2.1"
 
-__all__ = ["Model", "Tensor", "Operation", "UnknownOperationException",
+__all__ = ["Model", "Tensor", "Operation", "reset", "optimize", "UnknownOperationException",
            "OperationMismatchException", "InvalidImplementationException",
            "UnknownImplementationException", "ScipyOperationException", "IMPL_NUMPY", "IMPL_SCIPY",
            "IMPLS", "HAS_SCIPY"]
@@ -548,6 +548,14 @@ class Operation(object):
             return cls
 
         return wrapper
+
+
+def reset():
+    """
+    Resets the instance caches of :py:class:`TensorRegister` and :py:class:`OperationRegister`.
+    """
+    TensorRegister.instances.clear()
+    OperationRegister.instances.clear()
 
 
 def optimize(order):

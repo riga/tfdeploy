@@ -158,7 +158,7 @@ When writing new ops, three things are important:
 
 tfdeploy provides a helper class to evaluate an ensemble of models: ``Ensemble``. It can load multiple models, evaluate them and combine their output values using different methods.
 
-```pyton
+```python
 # create the ensemble
 ensemble = td.Ensemble(["model1.pkl", "model2.pkl", ...], method=td.METHOD_MEAN)
 

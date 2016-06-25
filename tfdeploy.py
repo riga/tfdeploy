@@ -594,6 +594,8 @@ class Ensemble(object):
     """
 
     def __init__(self, paths=None, method=METHOD_MEAN):
+        """ __init__(paths=None, method=METHOD_MEAN)
+        """
         super(Ensemble, self).__init__()
 
         # check method
@@ -639,7 +641,7 @@ class Ensemble(object):
 
 class TensorEnsemble(object):
     """
-    A tensor ensemble basically contains a list of tensors that correspond to models of a
+    A tensor ensemble basically contains a list of tensors that correspond to models of an
     :py:class:`Ensemble` instance.
 
     .. py:attribute: tensors

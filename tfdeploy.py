@@ -672,7 +672,7 @@ class TensorEnsemble(object):
         _uuid = uuid4()
 
         # prepare feed_dicts
-        feed_dicts = [{} for _ in len(self.tensors)]
+        feed_dicts = [{} for _ in range(len(self.tensors))]
         for tensorEnsemble, value in feed_dict.items():
             for i, tensor in enumerate(tensorEnsemble.tensors):
                 if tensor is not None:
@@ -705,15 +705,15 @@ class TensorEnsemble(object):
 
     @staticmethod
     def func_mean(values):
-        return np.mean(values, axis=-1)
+        return reduce(np.add, values) / len(values)
 
     @staticmethod
     def func_max(values):
-        return np.max(values, axis=-1)
+        return reduce(lambda a, b: np.max(a, b, axis=-1), values)
 
     @staticmethod
     def func_min(values):
-        return np.min(values, axis=-1)
+        return reduce(lambda a, b: np.min(a, b, axis=-1), values)
 
     @staticmethod
     def func_custom(values):
@@ -743,7 +743,7 @@ def optimize(order):
 
     *impl* can also be a list or tuple of valid implementation types representing a preferred order.
     """
-    if isinstance(order, str):
+    if not isinstance(order, (list, tuple)):
         order = [order]
 
     for op in Operation.__subclasses__():

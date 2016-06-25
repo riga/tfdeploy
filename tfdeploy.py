@@ -14,10 +14,14 @@ __license__    = "MIT"
 __status__     = "Development"
 __version__    = "0.2.2"
 
-__all__ = ["Model", "Tensor", "Operation", "reset", "optimize", "UnknownOperationException",
-           "OperationMismatchException", "InvalidImplementationException",
-           "UnknownImplementationException", "ScipyOperationException", "IMPL_NUMPY", "IMPL_SCIPY",
-           "IMPLS", "HAS_SCIPY"]
+__all__ = ["Model", "Tensor", "Operation", "Ensemble",
+           "reset", "optimize",
+           "UnknownOperationException", "OperationMismatchException",
+           "InvalidImplementationException", "UnknownImplementationException",
+           "ScipyOperationException",
+           "IMPL_NUMPY", "IMPL_SCIPY", "IMPLS",
+           "METHOD_MEAN", "METHOD_MAX", "METHOD_MIN", "METHOD_CUSTOM", "METHODS",
+           "HAS_SCIPY"]
 
 
 # imports for core code
@@ -32,6 +36,9 @@ try:
 except ImportError:
     # python 3
     import pickle
+
+# third-party imports
+import numpy as np
 
 
 # metaclass decorator from six package, credits to Benjamin Peterson
@@ -107,9 +114,10 @@ class Model(object):
 
     def get(self, *names, **kwargs):
         """ get(*names, key=None)
-        Returns one or more tensors given by *names* using a deep lookup within the model. If *key*
-        is not *None*, Only the root tensor with that *key* is traversed. *None* is returned when no
-        tensor was found. In case a tensor is passed, it's name is used for the lookup.
+        Returns one or more :py:class:`Tensor` instances given by *names* using a deep lookup within
+        the model. If *key* is not *None*, only the root tensor with that *key* is traversed. *None*
+        is returned when no tensor was found. In case a tensor is passed, it's name is used for the
+        lookup.
         """
         tensors = tuple(self._get(name, **kwargs) for name in names)
         return tensors[0] if len(names) == 1 else tensors
@@ -316,9 +324,8 @@ class OperationRegister(type):
 
 
 # implementation types
-IMPL_NUMPY = "numpy"
-IMPL_SCIPY = "scipy"
-IMPLS = (IMPL_NUMPY, IMPL_SCIPY)
+IMPLS = IMPL_NUMPY, IMPL_SCIPY = range(2)
+IMPL_NAMES = ["numpy", "scipy"]
 
 
 @add_metaclass(OperationRegister)
@@ -495,7 +502,7 @@ class Operation(object):
             raise InvalidImplementationException(impl)
 
         def wrapper(func):
-            classdict = {"impls": [], "func_" + impl: staticmethod(func)}
+            classdict = {"impls": [], "func_" + IMPL_NAMES[impl]: staticmethod(func)}
             classdict.update(kwargs)
 
             cls = Operation.__class__(func.__name__, (Operation,), classdict)
@@ -513,7 +520,7 @@ class Operation(object):
         Switches the implementation type to *impl*. Returns the previous type.
         """
         if impl not in cls.impls:
-            raise UnknownImplementationException(impl + str(cls.impls) + str(cls))
+            raise UnknownImplementationException(impl)
 
         prev = cls.impl
         cls.impl = impl
@@ -542,12 +549,173 @@ class Operation(object):
             raise InvalidImplementationException(impl)
 
         def wrapper(func):
-            setattr(cls, "func_" + impl, staticmethod(func))
+            setattr(cls, "func_" + IMPL_NAMES[impl], staticmethod(func))
             if impl not in cls.impls:
                 cls.impls.append(impl)
             return cls
 
         return wrapper
+
+
+# ensemble method types
+METHODS = METHOD_MEAN, METHOD_MAX, METHOD_MIN, METHOD_CUSTOM = range(4)
+METHOD_NAMES = ["mean", "max", "min", "custom"]
+
+
+class Ensemble(object):
+    """
+    An ensemble is a wrapper around multiple models to compute ensemble values. It can initialized
+    with a list of model paths and an ensembling method that decides how to compute the merged
+    value.
+
+    .. code-block:: python
+
+       # create the ensemble
+       ensemble = Ensemble(["model1.pkl", "model2.pkl", ...], METHOD_MEAN)
+
+       # get input and output tensors (which actually are TensorEnsemble instances)
+       input, output = ensemble.get("input", "output")
+
+       # evaluate the ensemble just like a normal model
+       batch = ...
+       value = output.eval({input: batch})
+
+    If you want to use another method than ``METHOD_MEAN``, ``METHOD_MAX`` or ``METHOD_MAX``, use
+    ``METHOD_CUSTOM`` and overwrite the ``func_custom`` method of the :py:class:`TensorEnsemble`
+    instance.
+
+    .. py:attribute:: models
+
+       A list that contains all read models.
+
+    .. py:attribute:: method
+
+       The ensembling method.
+    """
+
+    def __init__(self, paths=None, method=METHOD_MEAN):
+        super(Ensemble, self).__init__()
+
+        # check method
+        if method not in METHODS:
+            raise UnknownEnsembleMethodException(method)
+        self.method = method
+
+        # loaded models
+        self.models = []
+
+        # load when desired
+        if paths is not None:
+            self.load(paths)
+
+    def get(self, *names, **kwargs):
+        """ get(*names, key=None)
+        Returns one or more :py:class:`TensorEnsemble` instances given by *names* using a deep
+        lookup within all read models. Each returned tensor ensemble will have ``len(models)``
+        tensors. If a model does not contain a specific tensor defined by a specific *name*, the
+        associated ensemble tensor will contain a *None* for that model in its tensors. If *key* is
+        not *None*, only the root tensors with that *key* are traversed.
+        """
+        # create empty tensor ensembles with our method
+        tensorEnsembles = [TensorEnsemble([], self.method) for name in names]
+
+        # loop over models, collect and add tensors
+        for model in self.models:
+            tensors = model.get(*names, **kwargs)
+            if not isinstance(tensors, tuple):
+                tensors = (tensors,)
+            for i, t in enumerate(tensors if isinstance(tensors, tuple) else (tensors,)):
+                tensorEnsembles[i].tensors.append(t)
+
+        return tensorEnsembles[0] if len(names) == 1 else tuple(tensorEnsembles)
+
+    def load(self, paths):
+        """
+        Loads models from a list of *paths*.
+        """
+        for path in paths:
+            self.models.append(Model(path))
+
+
+class TensorEnsemble(object):
+    """
+    A tensor ensemble basically contains a list of tensors that correspond to models of a
+    :py:class:`Ensemble` instance.
+
+    .. py:attribute: tensors
+
+       The list of contained tensors. Tensor *i* corresponds to model *i*.
+
+    .. py:attribute: method
+
+       The ensembling method.
+    """
+
+    def __init__(self, tensors, method=METHOD_MEAN):
+        super(TensorEnsemble, self).__init__()
+
+        # check method
+        if method not in METHODS:
+            raise UnknownEnsembleMethodException(method)
+        self.method = method
+
+        self.tensors = list(tensors)
+
+    def eval(self, feed_dict=None):
+        """
+        Evaluates all contained tensors using a *feed_dict* and returns the ensemble value. The keys
+        of *feed_dict* must be tensor ensembles.
+        """
+        # create a joined uuid
+        _uuid = uuid4()
+
+        # prepare feed_dicts
+        feed_dicts = [{} for _ in len(self.tensors)]
+        for tensorEnsemble, value in feed_dict.items():
+            for i, tensor in enumerate(tensorEnsemble.tensors):
+                if tensor is not None:
+                    feed_dicts[i][tensor] = value
+
+        # eval all tensors
+        values = [t.eval(feed_dict=d, _uuid=_uuid) for t, d in zip(self.tensors, feed_dicts)]
+
+        # return the computed ensemble value
+        return self.func(values)
+
+    def __call__(self, *args, **kwargs):
+        return self.eval(*args, **kwargs)
+
+    def func(self, values):
+        """
+        The actual ensembling logic that combines multiple values. The method call is forwareded to
+        the ensemble method-specific version which is determined using *method*.
+        """
+        if self.method == METHOD_MEAN:
+            return self.func_mean(values)
+        elif self.method == METHOD_MAX:
+            return self.func_max(values)
+        elif self.method == METHOD_MIN:
+            return self.func_min(values)
+        elif self.method == METHOD_CUSTOM:
+            return self.func_custom(values)
+        else:
+            raise UnknownEnsembleMethodException(self.method)
+
+    @staticmethod
+    def func_mean(values):
+        return np.mean(values, axis=-1)
+
+    @staticmethod
+    def func_max(values):
+        return np.max(values, axis=-1)
+
+    @staticmethod
+    def func_min(values):
+        return np.min(values, axis=-1)
+
+    @staticmethod
+    def func_custom(values):
+        raise NotImplementedError
 
 
 def reset():
@@ -610,6 +778,13 @@ class UnknownImplementationException(Exception):
     """
 
 
+class UnknownEnsembleMethodException(Exception):
+    """
+    An exception which is raised when an :py:class:`Ensemble` instance is initialised with an
+    unknown ensemle method.
+    """
+
+
 class ScipyOperationException(Exception):
     """
     An exception which is raised when trying to evaluate an op that uses scipy internally and scipy
@@ -625,9 +800,6 @@ class ScipyOperationException(Exception):
 from operator import mul
 from itertools import product
 from collections import defaultdict
-
-# third-party imports
-import numpy as np
 
 # optional import of scipy
 try:

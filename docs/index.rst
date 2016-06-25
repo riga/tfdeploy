@@ -38,6 +38,22 @@ Classes
    :members:
 
 
+``Ensemble``
+------------
+
+.. autoclass:: Ensemble
+   :member-order: bysource
+   :members:
+
+
+``TensorEnsemble``
+------------------
+
+.. autoclass:: TensorEnsemble
+   :member-order: bysource
+   :members:
+
+
 Functions
 ^^^^^^^^^
 

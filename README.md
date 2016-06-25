@@ -37,6 +37,20 @@ Numpy should be installed on your system. [Scipy](http://www.scipy.org/) is opti
 
 Currently, all math ops and a selection of nn ops are implemented. The remaining ops are about to follow, so there might be some  ``UnknownOperationException``'s during conversion. See [milestone v0.3.0](https://github.com/riga/tfdeploy/milestones/v0.3.0).
 
+### Content
+
+- [Why?](#why)
+- [How?](#how)
+    - [Convert your graph](#convert-your-graph) 
+    - [Load the model and evaluate](#load-the-model-and-evaluate)
+    - [Write your own operation](#write-your-own-operation)
+- [Ensembles](#ensembles)
+- [Optimization](#optimization)
+- [Performance](#performance)
+- [Contributing](#contributing)
+- [Development](#development)
+- [Authors](#authors)
+- [License](#license)
 
 ## Why?
 
@@ -83,7 +97,7 @@ model.add(y, sess) # y and all its ops and related tensors are added recursively
 model.save("model.pkl")
 ```
 
-##### Load the model and evaluate (without tensorflow)
+##### Load the model and evaluate
 
 ```python
 import numpy as np
@@ -138,6 +152,28 @@ When writing new ops, three things are important:
 - Try to avoid loops, prefer numpy vectorization.
 - Return a tuple.
 - Don't change incoming tensors/arrays in-place, always work on and return copies.
+
+
+## Ensembles
+
+tfdeploy provides a helper class to evaluate an ensemble of models: ``Ensemble``. It can load multiple models, evaluate them and combine their output values using different methods.
+
+```pyton
+# create the ensemble
+ensemble = td.Ensemble(["model1.pkl", "model2.pkl", ...], method=td.METHOD_MEAN)
+
+# get input and output tensors (which actually are TensorEnsemble instances)
+input, output = ensemble.get("input", "output")
+
+# evaluate the ensemble just like a normal model
+batch = ...
+value = output.eval({input: batch})
+```
+
+The return value of ``get()`` is a ``TensorEnsemble`` istance. It is basically a wrapper around multiple tensors and should be used as keys in the ``feed_dict`` of the ``eval()`` call.
+
+You can choose between ``METHOD_MEAN`` (the default), ``METHOD_MAX`` and ``METHOD_MIN``. If you want to use a custom ensembling method, use ``METHOD_CUSTOM`` and overwrite the static ``func_custom()`` method of the ``TensorEnsemble`` instance.
+
 
 
 ## Optimization

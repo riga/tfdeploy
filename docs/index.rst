@@ -112,6 +112,12 @@ Exceptions
 .. autoexception:: UnknownImplementationException
 
 
+``UnknownEnsembleMethodException``
+----------------------------------
+
+.. autoexception:: UnknownEnsembleMethodException
+
+
 ``ScipyOperationException``
 ---------------------------
 

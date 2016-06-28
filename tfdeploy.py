@@ -705,15 +705,15 @@ class TensorEnsemble(object):
 
     @staticmethod
     def func_mean(values):
-        return reduce(np.add, values) / len(values)
+        return np.mean(np.stack(values), axis=0)
 
     @staticmethod
     def func_max(values):
-        return reduce(lambda a, b: np.max(a, b, axis=-1), values)
+        return np.amax(np.stack(values), axis=0)
 
     @staticmethod
     def func_min(values):
-        return reduce(lambda a, b: np.min(a, b, axis=-1), values)
+        return np.amin(np.stack(values), axis=0)
 
     @staticmethod
     def func_custom(values):

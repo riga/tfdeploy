@@ -689,8 +689,8 @@ class TensorEnsemble(object):
 
     def func(self, values):
         """
-        The actual ensembling logic that combines multiple values. The method call is forwareded to
-        the ensemble method-specific version which is determined using *method*.
+        The actual ensembling logic that combines multiple *values*. The method call is forwareded
+        tothe ensemble method-specific variant which is determined using *method*.
         """
         if self.method == METHOD_MEAN:
             return self.func_mean(values)

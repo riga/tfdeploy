@@ -18,7 +18,7 @@ __all__ = ["Model", "Tensor", "Operation", "Ensemble",
            "reset", "optimize",
            "UnknownOperationException", "OperationMismatchException",
            "InvalidImplementationException", "UnknownImplementationException",
-           "ScipyOperationException",
+           "EnsembleMismatchException", "ScipyOperationException",
            "IMPL_NUMPY", "IMPL_SCIPY", "IMPLS",
            "METHOD_MEAN", "METHOD_MAX", "METHOD_MIN", "METHOD_CUSTOM", "METHODS",
            "HAS_SCIPY"]
@@ -619,7 +619,7 @@ class Ensemble(object):
         not *None*, only the root tensors with that *key* are traversed.
         """
         # create empty tensor ensembles with our method
-        tensorEnsembles = [TensorEnsemble([], self.method) for name in names]
+        tensor_ensembles = [TensorEnsemble([], self.method) for name in names]
 
         # loop over models, collect and add tensors
         for model in self.models:
@@ -627,9 +627,9 @@ class Ensemble(object):
             if not isinstance(tensors, tuple):
                 tensors = (tensors,)
             for i, t in enumerate(tensors if isinstance(tensors, tuple) else (tensors,)):
-                tensorEnsembles[i].tensors.append(t)
+                tensor_ensembles[i].tensors.append(t)
 
-        return tensorEnsembles[0] if len(names) == 1 else tuple(tensorEnsembles)
+        return tensor_ensembles[0] if len(names) == 1 else tuple(tensor_ensembles)
 
     def load(self, paths):
         """
@@ -666,17 +666,25 @@ class TensorEnsemble(object):
     def eval(self, feed_dict=None):
         """
         Evaluates all contained tensors using a *feed_dict* and returns the ensemble value. The keys
-        of *feed_dict* must be tensor ensembles.
+        of *feed_dict* must be tensor ensembles. Its values can be batches, i.e., numpy arrays, or
+        lists or tuples of batches. In the latter case, these lists or tuples must have the same
+        length as the list of stored tensors as they will be mapped.
         """
+        # first, check that the length of all feed_dict keys match our own length
+        for tensor_ensemble in feed_dict:
+            if len(tensor_ensemble.tensors) != len(self.tensors):
+                raise EnsembleMismatchException("incompatible lengths of tensors: %d, %d" \
+                                                % (len(self.tensors), len(tensor_ensemble.tensors)))
+
         # create a joined uuid
         _uuid = uuid4()
 
         # prepare feed_dicts
         feed_dicts = [{} for _ in range(len(self.tensors))]
-        for tensorEnsemble, value in feed_dict.items():
-            for i, tensor in enumerate(tensorEnsemble.tensors):
+        for tensor_ensemble, value in feed_dict.items():
+            for i, tensor in enumerate(tensor_ensemble.tensors):
                 if tensor is not None:
-                    feed_dicts[i][tensor] = value
+                    feed_dicts[i][tensor] = value[i] if isinstance(value, (list, tuple)) else value
 
         # eval all tensors
         values = [t.eval(feed_dict=d, _uuid=_uuid) for t, d in zip(self.tensors, feed_dicts)]
@@ -784,6 +792,15 @@ class UnknownEnsembleMethodException(Exception):
     """
     An exception which is raised when an :py:class:`Ensemble` instance is initialised with an
     unknown ensemle method.
+    """
+
+
+class EnsembleMismatchException(Exception):
+    """
+    An exception which is raised when a :py:class:`TensorEnsemble` instance is evaluated with a
+    *feed_dict* whose keys, i.e. also :py:class:`TensorEnsemble` instances, do not match the tensor
+    to evaluate. An example would be that a tensor ensemble with *n* tensors is evaluated with a
+    tensor ensemble it its *feed_dict* that contains *m* tensors.
     """
 
 

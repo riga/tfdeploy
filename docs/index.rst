@@ -118,6 +118,12 @@ Exceptions
 .. autoexception:: UnknownEnsembleMethodException
 
 
+``EnsembleMismatchException``
+-----------------------------
+
+.. autoexception:: EnsembleMismatchException
+
+
 ``ScipyOperationException``
 ---------------------------
 

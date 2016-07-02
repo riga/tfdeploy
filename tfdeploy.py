@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Deploy tensorflow graphs for faster evaluation and export to tensorflow-less environments running
+Deploy tensorflow graphs for fast evaluation and export to tensorflow-less environments running
 numpy.
 """
 

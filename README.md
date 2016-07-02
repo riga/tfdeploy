@@ -3,7 +3,7 @@
 
 [![Build Status](https://travis-ci.org/riga/tfdeploy.svg?branch=master)](https://travis-ci.org/riga/tfdeploy) [![Documentation Status](https://readthedocs.org/projects/tfdeploy/badge/?version=latest)](http://tfdeploy.readthedocs.org/en/latest/?badge=latest) [![Package Status](https://badge.fury.io/py/tfdeploy.svg)](https://badge.fury.io/py/tfdeploy)
 
-Deploy [tensorflow](https://www.tensorflow.org) graphs for *faster* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
+Deploy [tensorflow](https://www.tensorflow.org) graphs for *fast* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
 
 
 ##### Evaluation usage

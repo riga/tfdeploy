@@ -30,7 +30,7 @@ pip install tfdeploy
 
 or by simply copying the file into your project.
 
-Numpy should be installed on your system. [Scipy](http://www.scipy.org/) is optional. See [optimazation](#optimization) for more info on optional packages.
+Numpy should be installed on your system. [Scipy](http://www.scipy.org/) is optional. See [optimization](#optimization) for more info on optional packages.
 
 
 ##### Development status

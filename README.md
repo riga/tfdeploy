@@ -228,7 +228,7 @@ tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal ev
 This is a comparison for a basic graph where all ops are vectorized (basically ``Add``, ``MatMul`` and ``Softmax``):
 
 ```bash
-> ipython -i tests/perf.py
+> ipython -i tests/perf/simple.py
 
 In [1]: %timeit -n 100 test_tf()
 100 loops, best of 3: 109 ms per loop

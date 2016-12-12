@@ -3,8 +3,9 @@
 
 import os
 import numpy as np
-from .base import TestCase, tfdeploy as td
+from .base import TestCase, td
 import tensorflow as tf
+from tensorflow.python.framework import device
 
 
 __all__ = ["OpsTestCase"]
@@ -17,6 +18,8 @@ if os.environ.get("TD_TEST_GPU", "").lower() in ("1", "yes", "true"):
     DEVICE = GPU
 DEVICE_ID = "/%s:0" % ["cpu", "gpu"][DEVICE]
 
+# setup td
+td.setup(tf)
 
 # optimize for scipy depending on env
 if os.environ.get("TD_TEST_SCIPY", "").lower() in ("1", "yes", "true"):
@@ -29,7 +32,7 @@ class OpsTestCase(TestCase):
         super(OpsTestCase, self).__init__(*args, **kwargs)
 
         # add the device to the "_device_function_stack" of the default graph
-        dev = tf.python.framework.device.merge_device(DEVICE_ID)
+        dev = device.merge_device(DEVICE_ID)
         tf.get_default_graph()._device_function_stack.append(dev)
 
         # create a tf session
@@ -38,33 +41,41 @@ class OpsTestCase(TestCase):
         self.ndigits = 7
 
     def check(self, t, comp=None, ndigits=None, stats=False, abs=False, debug=False):
-        self.sess.run(tf.initialize_all_variables())
-        rtf = t.eval(session=self.sess)
-        rtd = td.Tensor(t, self.sess).eval()
+        if td._tf_version[:3] < (0, 12, 0):
+            self.sess.run(tf.initialize_all_variables())
+        else:
+            self.sess.run(tf.global_variables_initializer())
 
-        if hasattr(comp, "__call__"):
-            return comp(rtf, rtd)
+        if not isinstance(t, tuple):
+            t = (t,)
 
-        if ndigits is None:
-            ndigits = self.ndigits
+        for _t in t:
+            rtf = _t.eval(session=self.sess)
+            rtd = td.Tensor(_t, self.sess).eval()
 
-        if debug:
-            import pdb; pdb.set_trace()
+            if debug:
+                import pdb; pdb.set_trace()
 
-        if isinstance(rtf, np.ndarray):
-            self.assertEqual(rtf.dtype, rtd.dtype)
-            if not stats:
-                self.assertTrue(np.allclose(rtf, rtd))
-            else:
+            if ndigits is None:
+                ndigits = self.ndigits
+
+            if hasattr(comp, "__call__"):
+                return comp(rtf, rtd)
+
+            if isinstance(rtf, np.ndarray):
+                self.assertEqual(rtf.dtype, rtd.dtype)
                 if abs:
                     rtf = np.abs(rtf)
                     rtd = np.abs(rtd)
-                self.assertEqual(round(rtf.sum(), ndigits), round(rtd.sum(), ndigits))
-                self.assertEqual(round(rtf.mean(), ndigits), round(rtd.mean(), ndigits))
-        elif isinstance(rtf, float):
-            self.assertEqual(round(rtf, ndigits), round(rtd, ndigits))
-        else:
-            self.assertEqual(rtf, rtd)
+                if not stats:
+                    self.assertTrue(np.allclose(rtf, rtd, atol=0.1**ndigits))
+                else:
+                    self.assertEqual(round(rtf.sum(), ndigits), round(rtd.sum(), ndigits))
+                    self.assertEqual(round(rtf.mean(), ndigits), round(rtd.mean(), ndigits))
+            elif isinstance(rtf, float):
+                self.assertEqual(round(rtf, ndigits), round(rtd, ndigits))
+            else:
+                self.assertEqual(rtf, rtd)
 
     def random(self, *shapes, **kwargs):
         if all(isinstance(i, int) for i in shapes):
@@ -80,9 +91,74 @@ class OpsTestCase(TestCase):
         for type in td.OperationRegister.classes:
             self.assertIn("test_" + type, tests)
 
-    def test_Identity(self):
-        t = tf.identity(self.random(3, 4))
+    #
+    # sequences
+    #
+
+    def test_LinSpace(self):
+        t = tf.linspace(0., 10., 15)
         self.check(t)
+
+    def test_Range(self):
+        t = tf.range(1, 10, 2)
+        self.check(t)
+
+
+    #
+    # random tensors
+    #
+
+    def test_RandomStandardNormal(self):
+        t = tf.random_normal((40, 30), dtype="float32")
+        # compare only dtype
+        def comp(rtf, rtd):
+            self.assertEqual(rtf.dtype, rtd.dtype)
+        self.check(t, comp=comp)
+
+    def test_TruncatedNormal(self):
+        t = tf.truncated_normal((40, 300), dtype="float32")
+        # compare dtype and 2-sigma truncation
+        def comp(rtf, rtd):
+            self.assertEqual(rtf.dtype, rtd.dtype)
+            self.assertLessEqual(np.max(np.abs(rtd)), 2)
+        self.check(t, comp=comp)
+
+    def test_RandomUniform(self):
+        t = tf.random_uniform((50, 80), -2, 3, dtype="float32")
+        # compare only min, max and dtype
+        def comp(rtf, rtd):
+            self.assertLess(np.max(rtd), 3)
+            self.assertGreaterEqual(np.min(rtd), -2)
+            self.assertEqual(rtd.dtype, np.float32)
+        self.check(t, comp=comp)
+
+    def test_RandomUniformInt(self):
+        # no python interface yet, but might be something like
+        # t = tf.random_uniform_int((50, 80), -2, 3)
+        # # compare only min and max
+        # def comp(rtf, rtd):
+        #     self.assertLess(np.max(rtd), 3)
+        #     self.assertGreaterEqual(np.min(rtd), -2)
+        # self.check(t, comp=comp)
+        pass
+
+    def test_RandomShuffle(self):
+        t = tf.random_shuffle(self.random(10, 4))
+        # compare only sum of first axis
+        def comp(rtf, rtd):
+            self.assertTrue(np.allclose(np.sum(rtf, axis=0), np.sum(rtd, axis=0)))
+        self.check(t, comp=comp)
+
+    def test_random_crop(self):
+        t = tf.random_crop(self.random(3, 4, 8), [1, 2, 4])
+        # compare only shape
+        def comp(rtf, rtd):
+            self.assertEqual(rtf.shape, rtd.shape)
+        self.check(t, comp=comp)
+
+    #
+    # casting
+    #
 
     def test_Cast(self):
         t = tf.cast(self.random(3, 4).astype("float32"), tf.float64)
@@ -91,6 +167,11 @@ class OpsTestCase(TestCase):
     def test_StringToNumber(self):
         t = tf.string_to_number(list("0123456789"))
         self.check(t)
+
+
+    #
+    # shapes and shaping
+    #
 
     def test_Shape(self):
         t = tf.shape(self.random(3, 4, 5))
@@ -115,6 +196,11 @@ class OpsTestCase(TestCase):
     def test_ExpandDims(self):
         t = tf.expand_dims(self.random(2, 3, 3, 4), -2)
         self.check(t)
+
+
+    #
+    # slicing and joining
+    #
 
     def test_Slice(self):
         t = tf.slice(np.arange(3*4*8*6).reshape(3, 4, 8, 6), [1, 1, 2, 2], 4 * [2])
@@ -157,6 +243,11 @@ class OpsTestCase(TestCase):
         t = tf.transpose(self.random(4, 3, 5), perm=[2, 0, 1])
         self.check(t)
 
+
+    #
+    # arithmetic math ops
+    #
+
     def test_Add(self):
         t = tf.add(*self.random((3, 4), (3, 4)))
         self.check(t)
@@ -167,6 +258,10 @@ class OpsTestCase(TestCase):
 
     def test_Mul(self):
         t = tf.mul(*self.random((3, 5), (3, 5)))
+        self.check(t)
+
+    def test_scalar_mul(self):
+        t = tf.scalar_mul(1, tf.Variable(self.random(3, 5)))
         self.check(t)
 
     def test_Div(self):
@@ -181,13 +276,18 @@ class OpsTestCase(TestCase):
         t = tf.floordiv(*self.random((3, 5), (3, 5)))
         self.check(t)
 
+    def test_Mod(self):
+        t = tf.mod(*self.random((4, 3), (4, 3)))
+        self.check(t)
+
     def test_Cross(self):
         t = tf.cross(*self.random((4, 3), (4, 3)))
         self.check(t)
 
-    def test_Mod(self):
-        t = tf.mod(*self.random((4, 3), (4, 3)))
-        self.check(t)
+
+    #
+    # basic math ops
+    #
 
     def test_AddN(self):
         t = tf.add_n(self.random((4, 3), (4, 3)))
@@ -206,8 +306,9 @@ class OpsTestCase(TestCase):
         self.check(t)
 
     def test_Inv(self):
-        t = tf.inv(self.random(4, 3))
-        self.check(t)
+        if td._tf_version[:2] <= (0, 11):
+            t = tf.inv(self.random(4, 3))
+            self.check(t)
 
     def test_Square(self):
         t = tf.square(self.random(4, 3))
@@ -261,8 +362,32 @@ class OpsTestCase(TestCase):
         t = tf.sin(self.random(4, 3))
         self.check(t)
 
+    def test_lbeta(self):
+        t = tf.lbeta(self.random(4, 3))
+        self.check(t)
+
+    def test_Tan(self):
+        t = tf.tan(self.random(4, 3))
+        self.check(t)
+
+    def test_Acos(self):
+        t = tf.acos(self.random(4, 3))
+        self.check(t)
+
+    def test_Asin(self):
+        t = tf.asin(self.random(4, 3))
+        self.check(t)
+
+    def test_Atan(self):
+        t = tf.atan(self.random(4, 3))
+        self.check(t)
+
     def test_Lgamma(self):
         t = tf.lgamma(self.random(4, 3))
+        self.check(t)
+
+    def test_Digamma(self):
+        t = tf.digamma(self.random(4, 3))
         self.check(t)
 
     def test_Erf(self):
@@ -273,65 +398,124 @@ class OpsTestCase(TestCase):
         t = tf.erfc(self.random(4, 3))
         self.check(t)
 
+    def test_SquaredDifference(self):
+        t = tf.squared_difference(*self.random((3, 4, 4), (3, 4, 4)))
+        self.check(t)
+
+    def test_Igamma(self):
+        t = tf.igamma(*self.random((3, 3), (3, 3)))
+        self.check(t)
+
+    def test_Igammac(self):
+        t = tf.igammac(*self.random((3, 3), (3, 3)))
+        self.check(t)
+
+    def test_Zeta(self):
+        t = tf.zeta(self.random(3, 3) + 2, self.random(3, 3))
+        self.check(t)
+
+    def test_Polygamma(self):
+        t = tf.polygamma(np.array([1, 2, 3]).astype("float32"), np.array([4, 5, 6]).astype("float32"))
+        self.check(t)
+
+    def test_Betainc(self):
+        t = tf.betainc(*self.random((3, 3), (3, 3), (3, 3)))
+        self.check(t)
+
+
+    #
+    # matrix math ops
+    #
+
     def test_Diag(self):
         t = tf.diag(self.random(3, 3))
         self.check(t)
 
+    def test_DiagPart(self):
+        t = tf.diag_part(self.random(3, 3))
+        self.check(t)
+
+    def test_MatrixDiagPart(self):
+        if td._tf_version[:2] >= (0, 12):
+            t = tf.matrix_diag_part(self.random(3, 4, 4, 5))
+            self.check(t)
+
+    def test_trace(self):
+        t = tf.trace(self.random(3, 3))
+        self.check(t)
+
     def test_MatMul(self):
-        t = tf.matmul(*self.random((4, 3), (3, 5)))
+        t = tf.matmul(*self.random((4, 3), (3, 5)), transpose_a=False, transpose_b=False)
+        self.check(t)
+        t = tf.matmul(*self.random((3, 4), (3, 5)), transpose_a=True, transpose_b=False)
+        self.check(t)
+        t = tf.matmul(*self.random((4, 3), (5, 3)), transpose_a=False, transpose_b=True)
+        self.check(t)
+        t = tf.matmul(*self.random((3, 4), (5, 3)), transpose_a=True, transpose_b=True)
         self.check(t)
 
     def test_BatchMatMul(self):
-        t = tf.batch_matmul(*self.random((2, 4, 3, 4), (2, 4, 3, 5)), adj_x=True)
+        t = tf.batch_matmul(*self.random((2, 4, 4, 3), (2, 4, 3, 5)), adj_x=False, adj_y=False)
+        self.check(t)
+        t = tf.batch_matmul(*self.random((2, 4, 3, 4), (2, 4, 3, 5)), adj_x=True, adj_y=False)
+        self.check(t)
+        t = tf.batch_matmul(*self.random((2, 4, 4, 3), (2, 4, 5, 3)), adj_x=False, adj_y=True)
+        self.check(t)
+        t = tf.batch_matmul(*self.random((2, 4, 3, 4), (2, 4, 5, 3)), adj_x=True, adj_y=True)
         self.check(t)
 
     def test_MatrixDeterminant(self):
-        t = tf.matrix_determinant(self.random(3, 3))
-        self.check(t)
-
-    def test_BatchMatrixDeterminant(self):
-        t = tf.batch_matrix_determinant(self.random(2, 3, 4, 3, 3))
+        t = tf.matrix_determinant(self.random(2, 3, 4, 3, 3))
         self.check(t)
 
     def test_MatrixInverse(self):
-        t = tf.matrix_inverse(self.random(3, 3))
+        t = tf.matrix_inverse(self.random(2, 3, 4, 3, 3), adjoint=False)
         self.check(t)
-
-    def test_BatchMatrixInverse(self):
-        t = tf.batch_matrix_inverse(self.random(2, 3, 4, 3, 3))
+        t = tf.matrix_inverse(self.random(2, 3, 4, 3, 3), adjoint=True)
         self.check(t)
 
     def test_Cholesky(self):
-        t = tf.cholesky(np.array([8, 3, 3, 8]).reshape(2, 2).astype("float32"))
+        t = tf.cholesky(np.array(3 * [8, 3, 3, 8]).reshape(3, 2, 2).astype("float32"))
         self.check(t)
 
-    def test_BatchCholesky(self):
-        t = tf.batch_cholesky(np.array(3 * [8, 3, 3, 8]).reshape(3, 2, 2).astype("float32"))
+    def test_MatrixSolve(self):
+        t = tf.matrix_solve(*self.random((2, 3, 3, 3), (2, 3, 3, 1)), adjoint=False)
+        self.check(t)
+        t = tf.matrix_solve(*self.random((2, 3, 3, 3), (2, 3, 3, 1)), adjoint=True)
+        self.check(t)
+
+    def test_MatrixTriangularSolve(self):
+        t = tf.matrix_triangular_solve(*self.random((2, 3, 3, 3), (2, 3, 3, 1)), adjoint=False, lower=False)
+        self.check(t)
+        t = tf.matrix_triangular_solve(*self.random((2, 3, 3, 3), (2, 3, 3, 1)), adjoint=True, lower=False)
+        self.check(t)
+        t = tf.matrix_triangular_solve(*self.random((2, 3, 3, 3), (2, 3, 3, 1)), adjoint=False, lower=True)
+        self.check(t)
+
+    def test_MatrixSolveLs(self):
+        t = tf.matrix_solve_ls(*self.random((2, 3, 3, 3), (2, 3, 3, 1)))
         self.check(t)
 
     def test_SelfAdjointEig(self):
-        t = tf.self_adjoint_eig(np.array([3,2,1, 2,4,5, 1,5,6]).reshape(3, 3).astype("float32"))
+        # legacy support
+        pass
+
+    def test_SelfAdjointEigV2(self):
+        t = tf.self_adjoint_eig(np.array(3 * [3, 2, 2, 1]).reshape(3, 2, 2).astype("float32"))
         # the order of eigen vectors and values may differ between tf and np, so only compare sum
         # and mean
         # also, different numerical algorithms are used, so account for difference in precision by
         # comparing numbers with 4 digits
         self.check(t, ndigits=4, stats=True, abs=True)
 
-    def test_BatchSelfAdjointEig(self):
-        t = tf.batch_self_adjoint_eig(np.array(3 * [3, 2, 2, 1]).reshape(3, 2, 2).astype("float32"))
-        self.check(t, ndigits=4, stats=True)
+    def test_Svd(self):
+        t = tf.svd(self.random(4, 5, 3, 2).astype("float32"))
+        self.check(t, ndigits=4, abs=True)
 
-    def test_MatrixSolve(self):
-        t = tf.matrix_solve(*self.random((3, 3), (3, 1)))
-        self.check(t)
 
-    def test_BatchMatrixSolve(self):
-        t = tf.batch_matrix_solve(*self.random((2, 3, 3, 3), (2, 3, 3, 1)))
-        self.check(t)
-
-    def test_MatrixSolveLs(self):
-        t = tf.matrix_solve_ls(*self.random((3, 3), (3, 1)))
-        self.check(t)
+    #
+    # complex number ops
+    #
 
     def test_Complex(self):
         t = tf.complex(*self.random((3, 4), (3, 4)))
@@ -353,6 +537,11 @@ class OpsTestCase(TestCase):
         t = tf.real(tf.Variable(self.random(3, 4, complex=True)))
         self.check(t)
 
+
+    #
+    # Fourier transform ops
+    #
+
     def test_FFT2D(self):
         # only defined for gpu
         if DEVICE == GPU:
@@ -364,6 +553,23 @@ class OpsTestCase(TestCase):
         if DEVICE == GPU:
             t = tf.ifft2d(self.random(3, 4, complex=True))
             self.check(t)
+
+    def test_FFT3D(self):
+        # only defined for gpu
+        if DEVICE == GPU:
+            t = tf.fft3d(self.random(3, 4, 5, complex=True))
+            self.check(t)
+
+    def test_IFFT3D(self):
+        # only defined for gpu
+        if DEVICE == GPU:
+            t = tf.ifft3d(self.random(3, 4, 5, complex=True))
+            self.check(t)
+
+
+    #
+    # reduction
+    #
 
     def test_Sum(self):
         t = tf.reduce_sum(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
@@ -392,6 +598,11 @@ class OpsTestCase(TestCase):
     def test_Any(self):
         t = tf.reduce_any(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
+
+
+    #
+    # segmentation
+    #
 
     def test_SegmentSum(self):
         t = tf.segment_sum(self.random(4, 2, 3), np.array([0, 1, 1, 2]))
@@ -429,6 +640,11 @@ class OpsTestCase(TestCase):
         t = tf.sparse_segment_sqrt_n(self.random(4, 3, 2), [0, 2, 3], [0, 1, 1])
         self.check(t)
 
+
+    #
+    # sequence comparison and indexing
+    #
+
     def test_ArgMin(self):
         t = tf.argmin(self.random(3, 4, 2), 1)
         self.check(t)
@@ -438,79 +654,37 @@ class OpsTestCase(TestCase):
         self.check(t)
 
     def test_ListDiff(self):
-        l = np.random.randint(0, 5, 100)
-        t1, t2 = tf.listdiff(l, l[::-2])
-        self.check(t1)
-        self.check(t2)
+        if td._tf_version[:2] <= (0, 11):
+            l = np.random.randint(0, 5, 100)
+            t1, t2 = tf.listdiff(l, l[::-2])
+            self.check(t1)
+            self.check(t2)
 
     def test_Where(self):
         t = tf.where([[True, False], [False, False], [True, False]])
         self.check(t)
 
     def test_Unique(self):
-        t1, t2 = tf.unique([9, 3, 5, 7, 3, 9, 9])
-        self.check(t1)
-        self.check(t2)
+        t = tf.unique([9, 3, 5, 7, 3, 9, 9], out_idx=tf.int32)
+        self.check(t)
 
     def test_InvertPermutation(self):
         t = tf.invert_permutation(np.random.permutation(10))
         self.check(t)
 
-    def test_LinSpace(self):
-        t = tf.linspace(0., 10., 15)
+
+    #
+    # control flow ops
+    #
+
+    def test_Identity(self):
+        t = tf.identity(self.random(3, 4))
         self.check(t)
 
-    def test_Range(self):
-        t = tf.range(1, 10, 2)
-        self.check(t)
 
-    def test_RandomStandardNormal(self):
-        t = tf.random_normal((40, 30), dtype="float32")
-        # compare only dtype
-        def comp(rtf, rtd):
-            self.assertEqual(rtf.dtype, rtd.dtype)
-        self.check(t, comp=comp)
-
-    def test_TruncatedNormal(self):
-        t = tf.truncated_normal((40, 300), dtype="float32")
-        # compare dtype and 2-sigma truncation
-        def comp(rtf, rtd):
-            self.assertEqual(rtf.dtype, rtd.dtype)
-            self.assertLessEqual(np.max(np.abs(rtd)), 2)
-        self.check(t, comp=comp)
-
-    def test_RandomUniform(self):
-        t = tf.random_uniform((50, 80), -2, 3, dtype="float32")
-        # compare only min, max and dtype
-        def comp(rtf, rtd):
-            self.assertLess(np.max(rtd), 3)
-            self.assertGreaterEqual(np.min(rtd), -2)
-            self.assertEqual(rtd.dtype, np.float32)
-        self.check(t, comp=comp)
-
-    def test_RandomUniformInt(self):
-        # no python interface yet, but might be something like
-        # t = tf.random_uniform_int((50, 80), -2, 3)
-        # # compare only min and max
-        # def comp(rtf, rtd):
-        #     self.assertLess(np.max(rtd), 3)
-        #     self.assertGreaterEqual(np.min(rtd), -2)
-        # self.check(t, comp=comp)
-        pass
-
-    def test_RandomShuffle(self):
-        t = tf.random_shuffle(self.random(10, 4))
-        # compare only sum of first axis
-        def comp(rtf, rtd):
-            self.assertTrue(np.allclose(np.sum(rtf, axis=0), np.sum(rtd, axis=0)))
-        self.check(t, comp=comp)
-
-    def test_RandomCrop(self):
-        t = tf.random_crop(self.random(3, 4, 8), [1, 2, 4])
-        # compare only shape
-        def comp(rtf, rtd):
-            self.assertEqual(rtf.shape, rtd.shape)
-        self.check(t, comp=comp)
+    #
+    # NN activation ops
+    #
 
     def test_Relu(self):
         t = tf.nn.relu(self.random(100) - 0.5)
@@ -546,4 +720,76 @@ class OpsTestCase(TestCase):
 
     def test_Softmax(self):
         t = tf.nn.softmax(self.random(10, 5))
+        self.check(t)
+
+
+    #
+    # NN convolution ops
+    #
+
+    def test_Conv1D(self):
+        t = tf.nn.conv1d(np.arange(8000).reshape(1000, 2, 4).astype("float32"),
+                         np.ones(80).reshape(2, 4, 10).astype("float32"),
+                         1, "SAME")
+        self.check(t)
+        t = tf.nn.conv1d(np.arange(8000).reshape(1000, 2, 4).astype("float32"),
+                         np.ones(80).reshape(2, 4, 10).astype("float32"),
+                         2, "VALID")
+        self.check(t)
+
+    def test_Conv2D(self):
+        t = tf.nn.conv2d(np.arange(24000).reshape(1000, 2, 3, 4).astype("float32"),
+                         np.ones(160).reshape(2, 2, 4, 10).astype("float32"),
+                         [1, 2, 3, 1], "SAME")
+        self.check(t)
+        t = tf.nn.conv2d(np.arange(24000).reshape(1000, 2, 3, 4).astype("float32"),
+                         np.ones(160).reshape(2, 2, 4, 10).astype("float32"),
+                         [1, 2, 5, 1], "VALID")
+        self.check(t)
+
+    def test_Conv3D(self):
+        t = tf.nn.conv3d(np.arange(72000).reshape(1000, 2, 3, 3, 4).astype("float32"),
+                         np.ones(320).reshape(2, 2, 2, 4, 10).astype("float32"),
+                         [1, 1, 1, 1, 1], "SAME")
+        self.check(t)
+        t = tf.nn.conv3d(np.arange(72000).reshape(1000, 2, 3, 3, 4).astype("float32"),
+                         np.ones(320).reshape(2, 2, 2, 4, 10).astype("float32"),
+                         [1, 1, 1, 1, 1], "VALID")
+        self.check(t)
+
+
+    #
+    # pooling ops
+    #
+
+    def test_AvgPool(self):
+        t = tf.nn.avg_pool(np.arange(16).reshape(1, 4, 4, 1).astype("float32"),
+                           [1, 2, 2, 1], [1, 1, 1, 1], "SAME")
+        self.check(t)
+        t = tf.nn.avg_pool(np.arange(16).reshape(1, 4, 4, 1).astype("float32"),
+                           [1, 2, 2, 1], [1, 2, 2, 1], "VALID")
+        self.check(t)
+
+    def test_MaxPool(self):
+        t = tf.nn.max_pool(np.arange(16).reshape(1, 4, 4, 1).astype("float32"),
+                           [1, 2, 2, 1], [1, 1, 1, 1], "SAME")
+        self.check()
+        t = tf.nn.max_pool(np.arange(16).reshape(1, 4, 4, 1).astype("float32"),
+                           [1, 2, 2, 1], [1, 2, 2, 1], "VALID")
+        self.check(t)
+
+    def test_AvgPool3D(self):
+        t = tf.nn.avg_pool3d(np.arange(64).reshape(1, 4, 4, 4, 1).astype("float32"),
+                           [1, 2, 2, 2, 1], [1, 1, 1, 1, 1], "SAME")
+        self.check(t)
+        t = tf.nn.avg_pool3d(np.arange(48).reshape(1, 4, 4, 3, 1).astype("float32"),
+                           [1, 2, 2, 1, 1], [1, 2, 2, 1, 1], "VALID")
+        self.check(t)
+
+    def test_MaxPool3D(self):
+        t = tf.nn.max_pool3d(np.arange(64).reshape(1, 4, 4, 4, 1).astype("float32"),
+                           [1, 2, 2, 2, 1], [1, 1, 1, 1, 1], "SAME")
+        self.check(t)
+        t = tf.nn.max_pool3d(np.arange(48).reshape(1, 4, 4, 3, 1).astype("float32"),
+                           [1, 2, 2, 1, 1], [1, 2, 2, 1, 1], "VALID")
         self.check(t)

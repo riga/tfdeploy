@@ -2,6 +2,7 @@
 
 
 import tensorflow as tf
+import tfdeploy as td
 
 
 sess = tf.Session()
@@ -16,4 +17,7 @@ W_drop = tf.nn.dropout(W, keep_prob)
 
 y = tf.nn.softmax(tf.matmul(x, W_drop) + b, name="output")
 
-sess.run(tf.initialize_all_variables())
+if td._tf_version[:3] < (0, 12, 0):
+    sess.run(tf.initialize_all_variables())
+else:
+    sess.run(tf.global_variables_initializer())

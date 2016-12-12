@@ -11,7 +11,11 @@ x = tf.placeholder("float", shape=[None, 784], name="input")
 W = tf.Variable(tf.truncated_normal([784, 100], stddev=0.05))
 b = tf.Variable(tf.zeros([100]))
 y = tf.nn.softmax(tf.matmul(x, W) + b, name="output")
-sess.run(tf.initialize_all_variables())
+
+if td._tf_version[:3] < (0, 12, 0) and 0:
+    sess.run(tf.initialize_all_variables())
+else:
+    sess.run(tf.global_variables_initializer())
 
 # setup td model
 model = td.Model()

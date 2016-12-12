@@ -30,12 +30,10 @@ pip install tfdeploy
 
 or by simply copying the file into your project.
 
-Numpy should be installed on your system. [Scipy](http://www.scipy.org/) is optional. See [optimization](#optimization) for more info on optional packages.
+Numpy ≥ 1.10 should be installed on your system. [Scipy](http://www.scipy.org/) is optional. See [optimization](#optimization) for more info on optional packages.
 
+By design, tensorflow is required when creating a model. All versions ≥ 0.11 are supported.
 
-##### Development status
-
-Currently, all math ops and a selection of nn ops are implemented. The remaining ops are about to follow, so there might be some  ``UnknownOperationException``'s during conversion. See [milestone v0.3.0](https://github.com/riga/tfdeploy/milestones/v0.3.0).
 
 ### Content
 
@@ -61,7 +59,7 @@ However, when it comes down to model deployment and evaluation, things get a bit
 To boil it down, tfdeploy
 
 - is lightweight. A single file with < 150 lines of core code. Just copy it to your project.
-- [faster](#performance) than using tensorflow's ``Tensor.eval``.
+- [faster](#performance) than using tensorflow's `Tensor.eval`.
 - **does not need tensorflow** during evaluation.
 - only depends on numpy.
 - can load one or more models from a single file.
@@ -70,13 +68,16 @@ To boil it down, tfdeploy
 
 ## How?
 
-The central class is ``tfdeploy.Model``. The following two examples demonstrate how a model can be created from a tensorflow graph, saved to and loaded from disk, and eventually evaluated.
+The central class is `tfdeploy.Model`. The following two examples demonstrate how a model can be created from a tensorflow graph, saved to and loaded from disk, and eventually evaluated.
 
 ##### Convert your graph
 
 ```python
 import tensorflow as tf
 import tfdeploy as td
+
+# setup tfdeploy (only when creating models)
+td.setup(tf)
 
 # build your graph
 sess = tf.Session()
@@ -87,7 +88,7 @@ W = tf.Variable(tf.truncated_normal([784, 100], stddev=0.05))
 b = tf.Variable(tf.zeros([100]))
 y = tf.nn.softmax(tf.matmul(x, W) + b, name="output")
 
-sess.run(tf.initialize_all_variables())
+sess.run(tf.global_variables_initializer())
 
 # ... training ...
 
@@ -113,14 +114,17 @@ batch = np.random.rand(10000, 784)
 result = y.eval({x: batch})
 ```
 
-##### Write your own ``Operation``
+##### Write your own `Operation`
 
-tfdeploy supports most of the ``Operation``'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom ops, you might want to extend tfdeploy by defining a new class op that inherits from ``tfdeploy.Operation``:
+tfdeploy supports most of the `Operation`'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom ops, you might want to extend tfdeploy by defining a new class op that inherits from `tfdeploy.Operation`:
 
 ```python
 import tensorflow as tf
 import tfdeploy as td
 import numpy as np
+
+# setup tfdeploy (only when creating models)
+td.setup(tf)
 
 # ... write you model here ...
 
@@ -135,11 +139,10 @@ class InvertedSoftmax(td.Operation):
         return np.divide(e, np.sum(e, axis=-1, keepdims=True)),
 
 # this is equivalent to
-
-@td.Operation.factory
-def InvertedSoftmax(a):
-    e = np.exp(-a)
-    return np.divide(e, np.sum(e, axis=-1, keepdims=True)),
+# @td.Operation.factory
+# def InvertedSoftmax(a):
+#     e = np.exp(-a)
+#     return np.divide(e, np.sum(e, axis=-1, keepdims=True)),
 
 # now we're good to go
 model = td.Model()
@@ -156,7 +159,7 @@ When writing new ops, three things are important:
 
 ## Ensembles
 
-tfdeploy provides a helper class to evaluate an ensemble of models: ``Ensemble``. It can load multiple models, evaluate them and combine their output values using different methods.
+tfdeploy provides a helper class to evaluate an ensemble of models: `Ensemble`. It can load multiple models, evaluate them and combine their output values using different methods.
 
 ```python
 # create the ensemble
@@ -170,28 +173,27 @@ batch = ...
 value = output.eval({input: batch})
 ```
 
-The return value of ``get()`` is a ``TensorEnsemble`` istance. It is basically a wrapper around multiple tensors and should be used as keys in the ``feed_dict`` of the ``eval()`` call.
+The return value of `get()` is a `TensorEnsemble` istance. It is basically a wrapper around multiple tensors and should be used as keys in the `feed_dict` of the `eval()` call.
 
-You can choose between ``METHOD_MEAN`` (the default), ``METHOD_MAX`` and ``METHOD_MIN``. If you want to use a custom ensembling method, use ``METHOD_CUSTOM`` and overwrite the static ``func_custom()`` method of the ``TensorEnsemble`` instance.
-
+You can choose between `METHOD_MEAN` (the default), `METHOD_MAX` and `METHOD_MIN`. If you want to use a custom ensembling method, use `METHOD_CUSTOM` and overwrite the static `func_custom()` method of the `TensorEnsemble` instance.
 
 
 ## Optimization
 
 Most ops are written using pure numpy. However, multiple implementations of the same op are allowed that may use additional third-party Python packages providing even faster functionality for some situations.
 
-For example, numpy does not provide a vectorized *lgamma* function. Thus, the standard ``tfdeploy.Lgamma`` op uses ``math.lgamma`` that was previously vectorized using ``numpy.vectorize``. For these situations, additional implementations of the same op are possible (the *lgamma* example is quite academic, but this definitely makes sense for more sophisticated ops like pooling). We can simply tell the op to use its scipy implementation instead:
+For example, numpy does not provide a vectorized *lgamma* function. Thus, the standard `tfdeploy.Lgamma` op uses `math.lgamma` that was previously vectorized using `numpy.vectorize`. For these situations, additional implementations of the same op are possible (the *lgamma* example is quite academic, but this definitely makes sense for more sophisticated ops like pooling). We can simply tell the op to use its scipy implementation instead:
 
 ```python
 td.Lgamma.use_impl(td.IMPL_SCIPY)
 ```
 
-Currently, allowed implementation types are numpy (``IMPL_NUMPY``, the default) and scipy (``IMPL_SCIPY``).
+Currently, allowed implementation types are numpy (`IMPL_NUMPY`, the default) and scipy (`IMPL_SCIPY`).
 
 
 ##### Adding additional implementations
 
-Additional implementations can be added by setting the ``impl`` attribute of the op factory or by using the ``add_impl`` decorator of existing operations. The first registered implementation will be the default one.
+Additional implementations can be added by setting the `impl` attribute of the op factory or by using the `add_impl` decorator of existing operations. The first registered implementation will be the default one.
 
 ```python
 # create the default lgamma op with numpy implementation
@@ -212,20 +214,20 @@ def Lgamma(a):
 
 ##### Auto-optimization
 
-If scipy is available on your system, it is reasonable to use all ops in their scipy implementation (if it exists, of course):
+If scipy is available on your system, it is reasonable to use all ops in their scipy implementation (if it exists, of course). This should be configured before you create any model from tensorflow objects using the second argument of the `setup` function:
 
 ```python
-td.optimize(td.IMPL_SCIPY)
+td.setup(tf, td.IMPL_SCIPY)
 ```
 
-Ops that do not implement ``IMPL_SCIPY`` stick with the numpy version (``IMPL_NUMPY``). 
+Ops that do not implement `IMPL_SCIPY` stick with the numpy version (`IMPL_NUMPY`). 
 
 
 ## Performance
 
-tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal evaluation calls have only very few overhead and tensor operations use numpy vectorization. The actual performance depends on the ops in your graph. While most of the tensorflow ops have a numpy equivalent or can be constructed from numpy functions, a few ops require additional Python-based loops (e.g. ``BatchMatMul``). But in many cases it's potentially faster than using tensorflow's ``Tensor.eval``.
+tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal evaluation calls have only very few overhead and tensor operations use numpy vectorization. The actual performance depends on the ops in your graph. While most of the tensorflow ops have a numpy equivalent or can be constructed from numpy functions, a few ops require additional Python-based loops (e.g. `BatchMatMul`). But in many cases it's potentially faster than using tensorflow's `Tensor.eval`.
 
-This is a comparison for a basic graph where all ops are vectorized (basically ``Add``, ``MatMul`` and ``Softmax``):
+This is a comparison for a basic graph where all ops are vectorized (basically `Add`, `MatMul` and `Softmax`):
 
 ```bash
 > ipython -i tests/perf/simple.py
@@ -239,10 +241,34 @@ In [2]: %timeit -n 100 test_td()
 
 ## Contributing
 
-If you want to contribute with new ops and features, I'm happy to receive pull requests. Just make sure to add a new test case to ``tests/core.py`` or ``tests/ops.py`` and run them via:
+If you want to contribute with new ops and features, I'm happy to receive pull requests. Just make sure to add a new test case to `tests/core.py` or `tests/ops.py` and run them via:
 
 ```bash
 > python -m unittest tests
+```
+
+
+##### Test grid
+
+In general, tests should be run for different environments:
+
+|     Variation      |         Values         |
+| ------------------ | ---------------------- |
+| tensorflow version | `0.12.0-rc1`, `0.11.0` |
+| python version     | 2, 3                   |
+| `TD_TEST_GPU`      | 0, 1                   |
+| `TD_TEST_SCIPY`    | 0, 1                   |
+
+
+##### Docker
+
+For testing purposes, it is convenient to use docker. Fortunately, the official [tensorflow images](https://hub.docker.com/r/tensorflow/tensorflow/) contain all we need:
+
+```bash
+git clone https://github.com/riga/tfdeploy.git
+cd tfdeploy
+
+docker run --rm -v `pwd`:/root/tfdeploy -w /root/tfdeploy -e "TD_TEST_SCIPY=1" tensorflow/tensorflow:0.12.0-rc0 python -m unittest tests
 ```
 
 

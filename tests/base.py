@@ -5,11 +5,16 @@ import os
 import sys
 import unittest
 
+import tensorflow as tf
+
 
 # adjust the path to import tfdeploy
 base = os.path.normpath(os.path.join(os.path.abspath(__file__), "../.."))
 sys.path.append(base)
-import tfdeploy
+import tfdeploy as td
+
+# setup
+td.setup(tf)
 
 
 class TestCase(unittest.TestCase):

@@ -57,6 +57,12 @@ Classes
 Functions
 ^^^^^^^^^
 
+``setup``
+---------
+
+.. autofunction:: setup
+
+
 ``reset``
 ---------
 
@@ -67,6 +73,30 @@ Functions
 ------------
 
 .. autofunction:: optimize
+
+
+``print_tensor``
+----------------
+
+.. autofunction:: print_tensor
+
+
+``print_op``
+------------
+
+.. autofunction:: print_op
+
+
+``print_tf_tensor``
+-------------------
+
+.. autofunction:: print_tf_tensor
+
+
+``print_tf_op``
+---------------
+
+.. autofunction:: print_tf_op
 
 
 Other Attributes

@@ -9,7 +9,16 @@ services:
 
 matrix:
   include:
-    - env: TF_TAG=0.9.0 TD_TEST_SCIPY=0 TD_TEST_GPU=0
+    - env: TF_TAG=0.9.0          TD_TEST_SCIPY=0 TD_TEST_GPU=0
+    # - env: TF_TAG=0.10.0         TD_TEST_SCIPY=0 TD_TEST_GPU=0
+    # - env: TF_TAG=0.11.0         TD_TEST_SCIPY=0 TD_TEST_GPU=0
+    # - env: TF_TAG=0.11.0         TD_TEST_SCIPY=1 TD_TEST_GPU=0
+    # - env: TF_TAG=0.11.0         TD_TEST_SCIPY=0 TD_TEST_GPU=1
+    # - env: TF_TAG=0.11.0-py3     TD_TEST_SCIPY=0 TD_TEST_GPU=0
+    # - env: TF_TAG=0.12.0-rc1     TD_TEST_SCIPY=0 TD_TEST_GPU=0
+    # - env: TF_TAG=0.12.0-rc1     TD_TEST_SCIPY=1 TD_TEST_GPU=0
+    # - env: TF_TAG=0.12.0-rc1     TD_TEST_SCIPY=0 TD_TEST_GPU=1
+    # - env: TF_TAG=0.12.0-rc1-py3 TD_TEST_SCIPY=0 TD_TEST_GPU=0
 
 install:
   - docker pull tensorflow/tensorflow:$TF_TAG

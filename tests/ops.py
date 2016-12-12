@@ -773,7 +773,7 @@ class OpsTestCase(TestCase):
     def test_MaxPool(self):
         t = tf.nn.max_pool(np.arange(16).reshape(1, 4, 4, 1).astype("float32"),
                            [1, 2, 2, 1], [1, 1, 1, 1], "SAME")
-        self.check()
+        self.check(t)
         t = tf.nn.max_pool(np.arange(16).reshape(1, 4, 4, 1).astype("float32"),
                            [1, 2, 2, 1], [1, 2, 2, 1], "VALID")
         self.check(t)

@@ -11,7 +11,7 @@ matrix:
   include:
     - env: TF_TAG=0.9.0 TD_TEST_SCIPY=0 TD_TEST_GPU=0
 
-before_install:
+install:
   - docker pull tensorflow/tensorflow:$TF_TAG
 
-script: docker run --rm -v `pwd`:/root/tfdeploy -w /root/tfdeploy -e TD_TEST_SCIPY=$TD_TEST_SCIPY -e TD_TEST_GPU=$TD_TEST_GPU -e tensorflow/tensorflow:$TF_TAG python -m unittest tests
+script: docker run --rm -v `pwd`:/root/tfdeploy -w /root/tfdeploy -e TD_TEST_SCIPY=$TD_TEST_SCIPY -e TD_TEST_GPU=$TD_TEST_GPU tensorflow/tensorflow:$TF_TAG python -m unittest tests

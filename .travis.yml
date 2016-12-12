@@ -1,64 +1,18 @@
-language: python
 sudo: required
+
+dist: trusty
+
+language: python
+
+services:
+  - docker
 
 matrix:
   include:
-    - os: linux
-      dist: trusty
-      python: "2.7"
-      env: TD_TEST_SCIPY=0 TF_VERSION=0.8.0
-    - os: linux
-      dist: trusty
-      python: "3.5"
-      env: TD_TEST_SCIPY=0 TF_VERSION=0.8.0
-    - os: linux
-      dist: trusty
-      python: "2.7"
-      env: TD_TEST_SCIPY=1 TF_VERSION=0.8.0
-    - os: linux
-      dist: trusty
-      python: "3.5"
-      env: TD_TEST_SCIPY=1 TF_VERSION=0.8.0
-    - os: linux
-      dist: trusty
-      python: "2.7"
-      env: TD_TEST_SCIPY=0 TF_VERSION=0.9.0
-    - os: linux
-      dist: trusty
-      python: "3.5"
-      env: TD_TEST_SCIPY=0 TF_VERSION=0.9.0
-    - os: linux
-      dist: trusty
-      python: "2.7"
-      env: TD_TEST_SCIPY=1 TF_VERSION=0.9.0
-    - os: linux
-      dist: trusty
-      python: "3.5"
-      env: TD_TEST_SCIPY=1 TF_VERSION=0.9.0
+    - env: TF_TAG=0.12.0-rc1 TD_TEST_SCIPY=0 TD_TEST_GPU=0
 
-install:
-  - pip install numpy;
-    if [ "$TD_TEST_SCIPY" = "1" ]; then
-      sudo apt-get -y install libblas-dev liblapack-dev libatlas-base-dev gfortran;
-      travis_wait 30 pip install scipy;
-    fi;
-    if [ "$TRAVIS_PYTHON_VERSION" = "2.7" ]; then
-      if [ "$TF_VERSION" = "0.8.0" ]; then
-        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp27-none-linux_x86_64.whl;
-      fi;
-      if [ "$TF_VERSION" = "0.9.0" ]; then
-        pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.9.0rc0-cp27-none-linux_x86_64.whl;
-      fi;
-    fi;
-    if [ "$TRAVIS_PYTHON_VERSION" = "3.5" ]; then
-      if [ "$TF_VERSION" = "0.8.0" ]; then
-        wget https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0-cp34-cp34m-linux_x86_64.whl;
-        mv tensorflow-0.8.0-cp34-cp34m-linux_x86_64.whl tensorflow-0.8.0-cp35-cp35m-linux_x86_64.whl;
-        pip3 install tensorflow-0.8.0-cp35-cp35m-linux_x86_64.whl;
-      fi;
-      if [ "$TF_VERSION" = "0.9.0" ]; then
-        pip3 install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.9.0rc0-cp35-cp35m-linux_x86_64.whl;
-      fi;
-    fi;
+before_install:
+  - pwd
+  - ls
 
-script: python -m unittest tests
+script: pwd && ls

@@ -11,7 +11,6 @@ matrix:
   include:
     - env: TF_TAG=0.11.0         TD_TEST_SCIPY=0 TD_TEST_GPU=0
     - env: TF_TAG=0.11.0         TD_TEST_SCIPY=1 TD_TEST_GPU=0
-    - env: TF_TAG=0.11.0-py3     TD_TEST_SCIPY=0 TD_TEST_GPU=0
     - env: TF_TAG=0.12.0-rc1     TD_TEST_SCIPY=0 TD_TEST_GPU=0
     - env: TF_TAG=0.12.0-rc1     TD_TEST_SCIPY=1 TD_TEST_GPU=0
     - env: TF_TAG=0.12.0-rc1-py3 TD_TEST_SCIPY=0 TD_TEST_GPU=0

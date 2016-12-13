@@ -47,6 +47,5 @@ setup(
     py_modules       = [td.__name__],
     keywords         = keywords,
     classifiers      = classifiers,
-    long_description = long_description,
-    data_files       = ["LICENSE", "requirements.txt"]
+    long_description = long_description
 )

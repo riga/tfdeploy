@@ -256,7 +256,6 @@ In general, tests should be run for different environments:
 | ------------------ | ---------------------- |
 | tensorflow version | `0.12.0-rc1`, `0.11.0` |
 | python version     | 2, 3                   |
-| `TD_TEST_GPU`      | 0, 1                   |
 | `TD_TEST_SCIPY`    | 0, 1                   |
 
 

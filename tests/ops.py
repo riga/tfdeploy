@@ -777,6 +777,9 @@ class OpsTestCase(TestCase):
         t = tf.nn.max_pool(np.arange(16).reshape(1, 4, 4, 1).astype("float32"),
                            [1, 2, 2, 1], [1, 2, 2, 1], "VALID")
         self.check(t)
+        t = tf.nn.max_pool(np.arange(64).reshape(2, 4, 8, 1).astype("float32"),
+                           [1, 2, 2, 1], [1, 3, 2, 1], "VALID")
+        self.check(t)
 
     def test_AvgPool3D(self):
         t = tf.nn.avg_pool3d(np.arange(64).reshape(1, 4, 4, 4, 1).astype("float32"),

@@ -2081,7 +2081,7 @@ def Softmax(a):
 # NN convolution ops
 #
 
-def _conv_patches(a, f, strides, padding, padmode="constant"):
+def _prepare_patches(a, f, strides, padding, padmode):
     v = np.array((0,) + (a.ndim - 2) * (1,) + (0,))
     w = np.array((0,) + f.shape[:-2] + (0,))
 
@@ -2096,6 +2096,12 @@ def _conv_patches(a, f, strides, padding, padmode="constant"):
         out_shape = np.ceil((np.array(a.shape).astype(np.float) - w + v) \
                             / strides).astype(np.int)
         pad = np.zeros(len(a.shape))
+
+    return out_shape, src
+
+
+def _conv_patches(a, f, strides, padding):
+    out_shape, src = _prepare_patches(a, f, strides, padding, "constant")
 
     patches = np.empty(tuple(out_shape)[:-1] + f.shape).astype(a.dtype)
 
@@ -2157,6 +2163,24 @@ def Conv3D(a, f, strides, padding):
 # NN pooling ops
 #
 
+def _pool_patches(a, k, strides, padding):
+    f = np.ones(k[1:] + [a.shape[-1]])
+
+    out_shape, src = _prepare_patches(a, f, strides, padding, "edge")
+
+    patches = np.empty(tuple(out_shape) + f.shape).astype(a.dtype)
+
+    s = (slice(None),)
+    e = (Ellipsis,)
+    en = (Ellipsis, np.newaxis)
+    for coord in np.ndindex(*out_shape[1:]):
+        pos = np.array(strides[1:]) * coord
+        patches[s + coord + e] = \
+            src[s + tuple(slice(*tpl) for tpl in zip(pos, pos + f.shape[:-1]))][en] * f
+
+    return patches
+
+
 @Operation.factory(attrs=("ksize", "strides", "padding", "data_format"))
 def AvgPool(a, k, strides, padding, data_format):
     """
@@ -2165,8 +2189,8 @@ def AvgPool(a, k, strides, padding, data_format):
     if data_format.decode("ascii") == "NCHW":
         a = np.rollaxis(a, 1, -1),
 
-    patches = _conv_patches(a, np.ones(k[1:] + [1]), strides, padding.decode("ascii"), "edge")
-    pool = np.average(patches, axis=tuple(range(-len(k), -1)))
+    patches = _pool_patches(a, k, strides, padding.decode("ascii"))
+    pool = np.average(patches, axis=tuple(range(-len(k), 0)))
 
     if data_format.decode("ascii") == "NCHW":
         pool = np.rollaxis(pool, -1, 1)
@@ -2182,8 +2206,8 @@ def MaxPool(a, k, strides, padding, data_format):
     if data_format.decode("ascii") == "NCHW":
         a = np.rollaxis(a, 1, -1),
 
-    patches = _conv_patches(a, np.ones(k[1:] + [1]), strides, padding.decode("ascii"), "edge")
-    pool = np.amax(patches, axis=tuple(range(-len(k), -1)))
+    patches = _pool_patches(a, k, strides, padding.decode("ascii"))
+    pool = np.amax(patches, axis=tuple(range(-len(k), 0)))
 
     if data_format.decode("ascii") == "NCHW":
         pool = np.rollaxis(pool, -1, 1)
@@ -2196,8 +2220,8 @@ def AvgPool3D(a, k, strides, padding):
     """
     Average 3D pooling op.
     """
-    patches = _conv_patches(a, np.ones(k[1:] + [1]), strides, padding.decode("ascii"), "edge")
-    return np.average(patches, axis=tuple(range(-len(k), -1))),
+    patches = _pool_patches(a, k, strides, padding.decode("ascii"))
+    return np.average(patches, axis=tuple(range(-len(k), 0))),
 
 
 @Operation.factory(attrs=("ksize", "strides", "padding"))
@@ -2205,5 +2229,5 @@ def MaxPool3D(a, k, strides, padding):
     """
     Maximum 3D pooling op.
     """
-    patches = _conv_patches(a, np.ones(k[1:] + [1]), strides, padding.decode("ascii"), "edge")
-    return np.amax(patches, axis=tuple(range(-len(k), -1))),
+    patches = _pool_patches(a, k, strides, padding.decode("ascii"))
+    return np.amax(patches, axis=tuple(range(-len(k), 0))),

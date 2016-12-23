@@ -153,9 +153,10 @@ class Model(object):
             tensor = Tensor(tensor, tf_sess, **kwargs)
 
         if key is None:
-            key = len(self.roots)
-            while key in self.roots:
-                key += 1
+            if len(self.roots) == 0:
+                key = 0
+            else:
+                key = max(self.roots.keys()) + 1
 
         self.roots[key] = tensor
 

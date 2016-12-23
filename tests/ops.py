@@ -574,30 +574,59 @@ class OpsTestCase(TestCase):
     def test_Sum(self):
         t = tf.reduce_sum(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
+        t = tf.reduce_sum(self.random(3, 4, 5), reduction_indices=(0, 1), keep_dims=True)
+        self.check(t)
+        t = tf.reduce_sum(self.random(3, 4, 5), reduction_indices=0, keep_dims=True)
+        self.check(t)
+        if td._tf_version[:3] < (0, 12, 0):
+            t = tf.reduce_sum(self.random(3, 4, 5), axis=[0, 1], keep_dims=True)
+            self.check(t)
+            t = tf.reduce_sum(self.random(3, 4, 5), axis=(0, 1), keep_dims=True)
+            self.check(t)
+            t = tf.reduce_sum(self.random(3, 4, 5), axis=0, keep_dims=True)
+            self.check(t)
 
     def test_Prod(self):
         t = tf.reduce_prod(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
+        if td._tf_version[:3] < (0, 12, 0):
+            t = tf.reduce_prod(self.random(3, 4, 5), axis=[0, 1], keep_dims=True)
+            self.check(t)
 
     def test_Min(self):
         t = tf.reduce_min(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
+        if td._tf_version[:3] < (0, 12, 0):
+            t = tf.reduce_min(self.random(3, 4, 5), axis=[0, 1], keep_dims=True)
+            self.check(t)
 
     def test_Max(self):
         t = tf.reduce_max(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
+        if td._tf_version[:3] < (0, 12, 0):
+            t = tf.reduce_max(self.random(3, 4, 5), axis=[0, 1], keep_dims=True)
+            self.check(t)
 
     def test_Mean(self):
         t = tf.reduce_mean(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
+        if td._tf_version[:3] < (0, 12, 0):
+            t = tf.reduce_mean(self.random(3, 4, 5), axis=[0, 1], keep_dims=True)
+            self.check(t)
 
     def test_All(self):
         t = tf.reduce_all(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
+        if td._tf_version[:3] < (0, 12, 0):
+            t = tf.reduce_all(self.random(3, 4, 5), axis=[0, 1], keep_dims=True)
+            self.check(t)
 
     def test_Any(self):
         t = tf.reduce_any(self.random(3, 4, 5), reduction_indices=[0, 1], keep_dims=True)
         self.check(t)
+        if td._tf_version[:3] < (0, 12, 0):
+            t = tf.reduce_any(self.random(3, 4, 5), axis=[0, 1], keep_dims=True)
+            self.check(t)
 
 
     #

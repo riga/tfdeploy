@@ -7,8 +7,8 @@ import numpy as np
 import tensorflow as tf
 print(80 * "-")
 print("python    : " + sys.version.split(" ")[0])
-print("numpy     : " + np.version.version)
 print("tensorflow: " + tf.__version__)
+print("numpy     : " + np.version.version)
 try:
     import scipy as sp
     spv = sp.version.version

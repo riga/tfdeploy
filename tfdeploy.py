@@ -398,7 +398,13 @@ class Operation(object):
         self.last_uuid = None
 
         # store attributes as kwargs for calls to eval
-        self.kwargs = [tf_op.get_attr(attr) for attr in (self.attrs or [])]
+        self.kwargs = []
+        for attr in self.attrs:
+            try:
+                value = tf_op.get_attr(attr)
+            except ValueError:
+                value = None
+            self.kwargs.append(value)
 
         # store output dtypes for calls to eval when x is True
         self.output_dtypes = [dtype_map[dtype] for dtype in tf_op._output_types]
@@ -1807,7 +1813,9 @@ def Sum(a, reduction_indices, keep_dims):
     """
     Sum reduction op.
     """
-    return np.sum(a, axis=tuple(reduction_indices), keepdims=keep_dims),
+    return np.sum(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
+                          tuple(reduction_indices),
+                  keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -1815,7 +1823,9 @@ def Prod(a, reduction_indices, keep_dims):
     """
     Prod reduction op.
     """
-    return np.prod(a, axis=tuple(reduction_indices), keepdims=keep_dims),
+    return np.prod(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
+                           tuple(reduction_indices),
+                   keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -1823,7 +1833,9 @@ def Min(a, reduction_indices, keep_dims):
     """
     Min reduction op.
     """
-    return np.amin(a, axis=tuple(reduction_indices), keepdims=keep_dims),
+    return np.amin(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
+                           tuple(reduction_indices),
+                   keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -1831,7 +1843,9 @@ def Max(a, reduction_indices, keep_dims):
     """
     Max reduction op.
     """
-    return np.amax(a, axis=tuple(reduction_indices), keepdims=keep_dims),
+    return np.amax(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
+                           tuple(reduction_indices),
+                   keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -1839,7 +1853,9 @@ def Mean(a, reduction_indices, keep_dims):
     """
     Mean reduction op.
     """
-    return np.mean(a, axis=tuple(reduction_indices), keepdims=keep_dims),
+    return np.mean(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
+                           tuple(reduction_indices),
+                   keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -1847,7 +1863,9 @@ def All(a, reduction_indices, keep_dims):
     """
     All reduction op.
     """
-    return np.all(a, axis=tuple(reduction_indices), keepdims=keep_dims),
+    return np.all(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
+                          tuple(reduction_indices),
+                  keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
@@ -1855,7 +1873,9 @@ def Any(a, reduction_indices, keep_dims):
     """
     Any reduction op.
     """
-    return np.any(a, axis=tuple(reduction_indices), keepdims=keep_dims),
+    return np.any(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
+                          tuple(reduction_indices),
+                  keepdims=keep_dims),
 
 
 #

@@ -13,7 +13,7 @@ if os.path.isfile(readme):
     p = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True, executable="/bin/bash")
     out, err = p.communicate()
     if p.returncode != 0:
-        raise Exception("pandoc conversion failed: " + err)
+        print("pandoc conversion failed: " + err)
     long_description = out
 else:
     long_description = ""
@@ -47,5 +47,5 @@ setup(
     py_modules       = [td.__name__],
     keywords         = keywords,
     classifiers      = classifiers,
-    long_description = long_description
+    long_description = long_description or td.__doc__.strip()
 )

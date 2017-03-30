@@ -1,9 +1,10 @@
 <img src="https://raw.githubusercontent.com/riga/tfdeploy/master/logo.png" alt="tfdeploy logo" width="250"/>
--
 
 [![Build Status](https://travis-ci.org/riga/tfdeploy.svg?branch=master)](https://travis-ci.org/riga/tfdeploy) [![Documentation Status](https://readthedocs.org/projects/tfdeploy/badge/?version=latest)](http://tfdeploy.readthedocs.org/en/latest/?badge=latest) [![Package Status](https://badge.fury.io/py/tfdeploy.svg)](https://badge.fury.io/py/tfdeploy)
 
 Deploy [tensorflow](https://www.tensorflow.org) graphs for *fast* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
+
+**Now with tensorflow 1.0 support.**
 
 
 ##### Evaluation usage
@@ -32,7 +33,7 @@ or by simply copying the file into your project.
 
 Numpy ≥ 1.10 should be installed on your system. [Scipy](http://www.scipy.org/) is optional. See [optimization](#optimization) for more info on optional packages.
 
-By design, tensorflow is required when creating a model. All versions ≥ 0.11 are supported.
+By design, tensorflow is required when creating a model. All versions ≥ 1.0.1 are supported.
 
 
 ### Content
@@ -252,11 +253,12 @@ If you want to contribute with new ops and features, I'm happy to receive pull r
 
 In general, tests should be run for different environments:
 
-|     Variation      |         Values         |
-| ------------------ | ---------------------- |
-| tensorflow version | `0.12.0-rc1`, `0.11.0` |
-| python version     | 2, 3                   |
-| `TD_TEST_SCIPY`    | 0, 1                   |
+|     Variation      |  Values |
+| ------------------ | ------- |
+| tensorflow version | `1.0.1` |
+| python version     | 2, 3    |
+| `TD_TEST_SCIPY`    | 0, 1    |
+| `TD_TEST_GPU`      | 0, 1    |
 
 
 ##### Docker
@@ -267,7 +269,7 @@ For testing purposes, it is convenient to use docker. Fortunately, the official 
 git clone https://github.com/riga/tfdeploy.git
 cd tfdeploy
 
-docker run --rm -v `pwd`:/root/tfdeploy -w /root/tfdeploy -e "TD_TEST_SCIPY=1" tensorflow/tensorflow:0.12.0-rc0 python -m unittest tests
+docker run --rm -v `pwd`:/root/tfdeploy -w /root/tfdeploy -e "TD_TEST_SCIPY=1" tensorflow/tensorflow:1.0.1 python -m unittest tests
 ```
 
 
@@ -287,7 +289,7 @@ docker run --rm -v `pwd`:/root/tfdeploy -w /root/tfdeploy -e "TD_TEST_SCIPY=1" t
 
 The MIT License (MIT)
 
-Copyright (c) 2016 Marcel R.
+Copyright (c) 2017 Marcel R.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

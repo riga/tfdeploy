@@ -91,6 +91,7 @@ class OpsTestCase(TestCase):
         for type in td.OperationRegister.classes:
             self.assertIn("test_" + type, tests)
 
+
     #
     # sequences
     #
@@ -156,6 +157,7 @@ class OpsTestCase(TestCase):
             self.assertEqual(rtf.shape, rtd.shape)
         self.check(t, comp=comp)
 
+
     #
     # casting
     #
@@ -207,7 +209,11 @@ class OpsTestCase(TestCase):
         self.check(t)
 
     def test_Split(self):
-        for t in tf.split(1, 5, self.random(8, 50, 10, 2)):
+        for t in tf.split(self.random(8, 50, 10, 2), 5, 2):
+            self.check(t)
+
+    def test_SplitV(self):
+        for t in tf.split(self.random(8, 50, 10, 2), [10, 30, 5, 1, 4], 1):
             self.check(t)
 
     def test_Tile(self):
@@ -218,16 +224,23 @@ class OpsTestCase(TestCase):
         t = tf.pad(self.random(3, 8, 5), [[1, 2], [2, 1], [1, 0]])
         self.check(t)
 
-    def test_Concat(self):
-        t = tf.concat(2, self.random((3, 4, 5), (3, 4, 5)))
+    def test_ConcatV2(self):
+        aaa = self.random((3, 4, 5), (3, 4, 5))
+        t = tf.concat(list(self.random((3, 4, 5), (3, 4, 5))), 2)
         self.check(t)
 
     def test_Pack(self):
-        t = tf.pack(self.random((3, 4, 5), (3, 4, 5)))
-        self.check(t)
+        pass
 
     def test_Unpack(self):
-        for t in tf.unpack(self.random(6, 4, 5)):
+        pass
+
+    def test_Stack(self):
+        t = tf.stack(list(self.random((3, 4, 5), (3, 4, 5))), 2)
+        self.check(t)
+
+    def test_Unstack(self):
+        for t in tf.unstack(self.random(6, 4, 5), axis=1):
             self.check(t)
 
     def test_ReverseSequence(self):
@@ -235,8 +248,8 @@ class OpsTestCase(TestCase):
         t = tf.reverse_sequence(x, [5, 0, 0, 8], seq_dim=2, batch_dim=1)
         self.check(t)
 
-    def test_Reverse(self):
-        t = tf.reverse(self.random(3, 4, 10), [True, False, True])
+    def test_ReverseV2(self):
+        t = tf.reverse(self.random(3, 4, 10), [1, 2])
         self.check(t)
 
     def test_Transpose(self):
@@ -252,19 +265,27 @@ class OpsTestCase(TestCase):
         t = tf.add(*self.random((3, 4), (3, 4)))
         self.check(t)
 
-    def test_Sub(self):
-        t = tf.sub(*self.random((3, 4), (3, 4)))
+    def test_Subtract(self):
+        t = tf.subtract(*self.random((3, 4), (3, 4)))
         self.check(t)
 
-    def test_Mul(self):
-        t = tf.mul(*self.random((3, 5), (3, 5)))
+    test_Sub = test_Subtract
+
+    def test_Multiply(self):
+        t = tf.multiply(*self.random((3, 5), (3, 5)))
         self.check(t)
+
+    test_Mul = test_Multiply
 
     def test_scalar_mul(self):
         t = tf.scalar_mul(1, tf.Variable(self.random(3, 5)))
         self.check(t)
 
     def test_Div(self):
+        t = tf.div(*self.random((3, 5), (3, 5)))
+        self.check(t)
+
+    def test_RealDiv(self):
         t = tf.div(*self.random((3, 5), (3, 5)))
         self.check(t)
 
@@ -278,6 +299,10 @@ class OpsTestCase(TestCase):
 
     def test_Mod(self):
         t = tf.mod(*self.random((4, 3), (4, 3)))
+        self.check(t)
+
+    def test_FloorMod(self):
+        t = tf.floormod(*self.random((4, 3), (4, 3)))
         self.check(t)
 
     def test_Cross(self):
@@ -297,9 +322,11 @@ class OpsTestCase(TestCase):
         t = tf.abs(-self.random(4, 3))
         self.check(t)
 
-    def test_Neg(self):
-        t = tf.neg(self.random(4, 3))
+    def test_Negative(self):
+        t = tf.negative(self.random(4, 3))
         self.check(t)
+
+    test_Neg = test_Negative
 
     def test_Sign(self):
         t = tf.sign(self.random(4, 3) - 0.5)
@@ -454,15 +481,15 @@ class OpsTestCase(TestCase):
         t = tf.matmul(*self.random((3, 4), (5, 3)), transpose_a=True, transpose_b=True)
         self.check(t)
 
-    def test_BatchMatMul(self):
-        t = tf.batch_matmul(*self.random((2, 4, 4, 3), (2, 4, 3, 5)), adj_x=False, adj_y=False)
-        self.check(t)
-        t = tf.batch_matmul(*self.random((2, 4, 3, 4), (2, 4, 3, 5)), adj_x=True, adj_y=False)
-        self.check(t)
-        t = tf.batch_matmul(*self.random((2, 4, 4, 3), (2, 4, 5, 3)), adj_x=False, adj_y=True)
-        self.check(t)
-        t = tf.batch_matmul(*self.random((2, 4, 3, 4), (2, 4, 5, 3)), adj_x=True, adj_y=True)
-        self.check(t)
+    # def test_BatchMatMul(self):
+    #     t = tf.batch_matmul(*self.random((2, 4, 4, 3), (2, 4, 3, 5)), adj_x=False, adj_y=False)
+    #     self.check(t)
+    #     t = tf.batch_matmul(*self.random((2, 4, 3, 4), (2, 4, 3, 5)), adj_x=True, adj_y=False)
+    #     self.check(t)
+    #     t = tf.batch_matmul(*self.random((2, 4, 4, 3), (2, 4, 5, 3)), adj_x=False, adj_y=True)
+    #     self.check(t)
+    #     t = tf.batch_matmul(*self.random((2, 4, 3, 4), (2, 4, 5, 3)), adj_x=True, adj_y=True)
+    #     self.check(t)
 
     def test_MatrixDeterminant(self):
         t = tf.matrix_determinant(self.random(2, 3, 4, 3, 3))
@@ -519,10 +546,6 @@ class OpsTestCase(TestCase):
 
     def test_Complex(self):
         t = tf.complex(*self.random((3, 4), (3, 4)))
-        self.check(t)
-
-    def test_ComplexAbs(self):
-        t = tf.complex_abs(tf.Variable(self.random(3, 4, complex=True)))
         self.check(t)
 
     def test_Conj(self):

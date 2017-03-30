@@ -7,7 +7,7 @@ numpy.
 
 
 __author__     = "Marcel Rieger"
-__copyright__  = "Copyright 2016, Marcel Rieger"
+__copyright__  = "Copyright 2016-2017, Marcel Rieger"
 __credits__    = ["Marcel Rieger"]
 __contact__    = "https://github.com/riga/tfdeploy"
 __license__    = "MIT"
@@ -215,12 +215,12 @@ class Tensor(object):
     .. py:attribute:: op
 
        The op instance that defines the value of this tensor. When created from a
-       ``tensorflow.Placeholder`` or a ``tensorflow.Variable``, op will be *None*.
+       ``tensorflow.Placeholder`` or a ``tensorflow.Variable/V2``, op will be *None*.
 
     .. py:attribute:: value
 
-       The value of this tensor. When created from a ``tensorflow.Variable``, this will be the value
-       of that variable, or *None* otherwise until it is evaluated the first time.
+       The value of this tensor. When created from a ``tensorflow.Variable/V2``, this will be the
+       value of that variable, or *None* otherwise until it is evaluated the first time.
     """
 
     def __init__(self, tf_tensor, tf_sess, tf_feed_dict=None):
@@ -237,7 +237,7 @@ class Tensor(object):
 
         # guess the value
         # explicitly evaluate variables and constants, use feed_dict for placeholders
-        if tf_tensor.op.type in ("Variable", "Const"):
+        if tf_tensor.op.type in ("Variable", "VariableV2", "Const"):
             self.value = tf_tensor.eval(session=tf_sess, feed_dict=tf_feed_dict)
         elif tf_tensor.op.type == "Placeholder":
             if tf_feed_dict is not None and tf_tensor in tf_feed_dict:
@@ -245,7 +245,7 @@ class Tensor(object):
 
         # create the op
         # no op for variables, placeholders and constants
-        if tf_tensor.op.type not in ("Variable", "Const", "Placeholder"):
+        if tf_tensor.op.type not in ("Variable", "VariableV2", "Const", "Placeholder"):
             self.op = Operation.new(tf_tensor.op, tf_sess, tf_feed_dict=tf_feed_dict)
 
     def get(self, *names):
@@ -1164,11 +1164,19 @@ def Slice(a, begin, size):
 
 
 @Operation.factory(attrs=("num_split",))
-def Split(dim, a, n):
+def Split(axis, a, n):
     """
-    Split op.
+    Split op with n splits.
     """
-    return tuple(np.split(np.copy(a), n, axis=dim))
+    return tuple(np.split(np.copy(a), n, axis=axis))
+
+
+@Operation.factory
+def SplitV(a, splits, axis):
+    """
+    Split op with multiple split sizes.
+    """
+    return tuple(np.split(np.copy(a), np.cumsum(splits), axis=axis))
 
 
 @Operation.factory
@@ -1187,28 +1195,29 @@ def Pad(a, paddings):
     return np.pad(a, paddings, mode="constant", constant_values=0),
 
 
-@Operation.factory
-def Concat(dim, *inputs):
+@Operation.factory(unpack=False)
+def ConcatV2(inputs):
     """
     Concat op.
     """
-    return np.concatenate(inputs, axis=dim),
+    axis = inputs.pop()
+    return np.concatenate(inputs, axis=axis),
 
 
-@Operation.factory
-def Pack(*inputs):
+@Operation.factory(attrs=("axis",), unpack=False)
+def Pack(inputs, axis):
     """
     Pack op.
     """
-    return np.asarray(inputs),
+    return np.stack(inputs, axis=axis),
 
 
-@Operation.factory
-def Unpack(a):
+@Operation.factory(attrs=("num", "axis"))
+def Unpack(a, num, axis):
     """
     Unpack op.
     """
-    return tuple(a)
+    return tuple(np.squeeze(b, axis=axis) for b in np.split(a, num, axis=axis))
 
 
 @Operation.factory(attrs=("seq_dim", "batch_dim"))
@@ -1235,11 +1244,11 @@ def ReverseSequence(a, seq_lengths, seq_dim, batch_dim):
 
 
 @Operation.factory
-def Reverse(a, dims):
+def ReverseV2(a, axes):
     """
     Reverse op.
     """
-    idxs = tuple(slice(None, None, -1 if dim else None) for dim in dims)
+    idxs = tuple(slice(None, None, 2 * int(i not in axes) - 1) for i in range(len(a.shape)))
     return np.copy(a[idxs]),
 
 
@@ -1263,23 +1272,23 @@ def Add(a, b):
     return np.add(a, b),
 
 
-@Operation.factory
-def Sub(a, b):
+@Operation.factory(types=("Subtract", "Sub"))
+def Subtract(a, b):
     """
     Subtraction op.
     """
     return np.subtract(a, b),
 
 
-@Operation.factory
-def Mul(a, b):
+@Operation.factory(types=("Multiply", "Mul"))
+def Multiply(a, b):
     """
     Multiplication op.
     """
     return np.multiply(a, b),
 
 
-@Operation.factory
+@Operation.factory(types=("Div", "RealDiv"))
 def Div(a, b):
     """
     Division op.
@@ -1288,6 +1297,14 @@ def Div(a, b):
 
 
 @Operation.factory
+def FloorDiv(a, b):
+    """
+    Floor division op, i.e., a // b.
+    """
+    return np.floor_divide(a, b),
+
+
+@Operation.factory(types=("Mod", "FloorMod"))
 def Mod(a, b):
     """
     Modulo op.
@@ -1323,10 +1340,10 @@ def Abs(a):
     return np.abs(a),
 
 
-@Operation.factory
-def Neg(a):
+@Operation.factory(types=("Negative", "Neg"))
+def Negative(a):
     """
-    Neg op.
+    Negative op.
     """
     return np.negative(a),
 
@@ -1619,24 +1636,6 @@ def MatMul(a, b, transpose_a, transpose_b):
                   b if not transpose_b else np.transpose(b)),
 
 
-@Operation.factory(attrs=("adj_x", "adj_y"))
-def BatchMatMul(a, b, adj_a, adj_b):
-    """
-    Batched matrix multiplication op.
-    """
-    # apply adjoint op if required along last two axes
-    if adj_a:
-        a = _adjoint(a)
-    if adj_b:
-        b = _adjoint(b)
-    # create the target tensor
-    r = np.empty(a.shape[:-2] + (a.shape[-2], b.shape[-1]))
-    # no batched dot op in np, so loop over all indexes except last two dims
-    for idx in product(*(range(dim) for dim in a.shape[:-2])):
-        r[idx] = np.dot(a[idx], b[idx])
-    return r,
-
-
 @Operation.factory
 def MatrixDeterminant(a):
     """
@@ -1738,14 +1737,6 @@ def Complex(a, b):
 
 
 @Operation.factory
-def ComplexAbs(a):
-    """
-    Complex number length op.
-    """
-    return np.abs(a),
-
-
-@Operation.factory
 def Conj(a):
     """
     Complex conjugate op.
@@ -1810,72 +1801,65 @@ def IFFT3D(a):
 #
 
 @Operation.factory(attrs=("keep_dims",))
-def Sum(a, reduction_indices, keep_dims):
+def Sum(a, axis, keep_dims):
     """
     Sum reduction op.
     """
-    return np.sum(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
-                          tuple(reduction_indices),
+    return np.sum(a, axis=axis if not isinstance(axis, np.ndarray) else tuple(axis),
                   keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
-def Prod(a, reduction_indices, keep_dims):
+def Prod(a, axis, keep_dims):
     """
     Prod reduction op.
     """
-    return np.prod(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
-                           tuple(reduction_indices),
+    return np.prod(a, axis=axis if not isinstance(axis, np.ndarray) else tuple(axis),
                    keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
-def Min(a, reduction_indices, keep_dims):
+def Min(a, axis, keep_dims):
     """
     Min reduction op.
     """
-    return np.amin(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
-                           tuple(reduction_indices),
+    return np.amin(a, axis=axis if not isinstance(axis, np.ndarray) else tuple(axis),
                    keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
-def Max(a, reduction_indices, keep_dims):
+def Max(a, axis, keep_dims):
     """
     Max reduction op.
     """
-    return np.amax(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
-                           tuple(reduction_indices),
+    return np.amax(a, axis=axis if not isinstance(axis, np.ndarray) else tuple(axis),
                    keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
-def Mean(a, reduction_indices, keep_dims):
+def Mean(a, axis, keep_dims):
     """
     Mean reduction op.
     """
-    return np.mean(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
-                           tuple(reduction_indices),
+    return np.mean(a, axis=axis if not isinstance(axis, np.ndarray) else tuple(axis),
                    keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
-def All(a, reduction_indices, keep_dims):
+def All(a, axis, keep_dims):
     """
     All reduction op.
     """
-    return np.all(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
-                          tuple(reduction_indices),
+    return np.all(a, axis=axis if not isinstance(axis, np.ndarray) else tuple(axis),
                   keepdims=keep_dims),
 
 
 @Operation.factory(attrs=("keep_dims",))
-def Any(a, reduction_indices, keep_dims):
+def Any(a, axis, keep_dims):
     """
     Any reduction op.
     """
-    return np.any(a, axis=reduction_indices if not isinstance(reduction_indices, np.ndarray) else \
-                          tuple(reduction_indices),
+    return np.any(a, axis=axis if not isinstance(axis, np.ndarray) else tuple(axis),
                   keepdims=keep_dims),
 
 

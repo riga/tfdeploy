@@ -15,7 +15,7 @@ try:
 
     from keras.models import Sequential, Model, Input
     from keras.layers import Convolution2D, MaxPooling2D, UpSampling2D, BatchNormalization, Dropout, Reshape, \
-        Conv2DTranspose
+        Conv2DTranspose, LSTM, GRU
     from keras.optimizers import Adam
     from keras.backend import tensorflow_backend as tfb
     import keras.backend as K
@@ -25,7 +25,7 @@ try:
 except ImportError:
     KERAS_MISSING = True
 
-UNSUPPORTED_LAYERS = ['Dropout', 'BatchNormalization', 'UpSampling2D', 'Convolution2DTranspose']
+UNSUPPORTED_LAYERS = ['Dropout', 'BatchNormalization', 'UpSampling2D', 'Convolution2DTranspose', 'LSTM']
 
 __all__ = ["KerasTestCase"]
 
@@ -37,8 +37,8 @@ class KerasTestCase(TestCase):
         td.setup(tf)
         K.set_image_dim_ordering('tf')
 
-    def test_simple_models(self):
-        test_models = [KerasTestCase._build_simple_cnn(*iv) for iv in product(*([[True, False]] * 5))]
+    def test_combined_models(self):
+        test_models = [KerasTestCase._build_simple_2d(*iv) for iv in product(*([[True, False]] * 6))]
         deployed_models = []
         for i, cur_keras_model in enumerate(test_models):
 
@@ -54,6 +54,8 @@ class KerasTestCase(TestCase):
                                    "Model contains no unsupported layers {}, "
                                    "Unsupported Layers:{}".format(model_layers, UNSUPPORTED_LAYERS))
 
+        self.assertGreater(len(deployed_models), 0, "No models could be tested")
+        print("Testing #{} models".format(len(deployed_models)))
         for c_model_pkl in deployed_models:
             result = KerasTestCase.deploy_model(c_model_pkl)
             self.assertIsNotNone(result, "Result should not be empty")
@@ -66,10 +68,17 @@ class KerasTestCase(TestCase):
         A test for bigger commonly used pretrained models (for this we skip the weights)
         :return: 
         """
+        kapp_kwargs = dict(
+            input_shape = (99, 99, 3),
+            weights = None,
+            include_top = False # so we can use different sizes
+                           )
         test_models = []
-        test_models += [('Resnet50', kapps.ResNet50(weights=None))]
-        test_models += [('InceptionV3', kapps.InceptionV3(weights=None))]
-        test_models += [('VGG19', kapps.VGG19(weights=None))]
+
+        test_models += [('Resnet50', kapps.ResNet50(**kapp_kwargs))]
+        test_models += [('InceptionV3', kapps.InceptionV3(**kapp_kwargs))]
+        test_models += [('VGG19', kapps.VGG19(**kapp_kwargs))]
+        test_models += [('Xception', kapps.Xception(**kapp_kwargs))]
 
         for i, (model_name, cur_keras_model) in enumerate(test_models):
 
@@ -118,8 +127,8 @@ class KerasTestCase(TestCase):
         i_model.compile(optimizer=Adam(lr=2e-3), loss='mse')
 
     @staticmethod
-    def _build_simple_cnn(use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
-                          use_conv2dtrans=False):
+    def _build_simple_2d(use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
+                         use_conv2dtrans=False, use_lstm=False):
         """
         Simple function for building CNN models with various layers turned on and off
         :param use_dropout: 
@@ -129,6 +138,9 @@ class KerasTestCase(TestCase):
         :return: 
         """
         out_model = Sequential()
+        if use_lstm:
+            out_model.add(Reshape(target_shape=(1, 81), input_shape=(81,), name='Reshape_LSTM'))
+            out_model.add(LSTM(81, name='LSTM'))
         out_model.add(Reshape(target_shape=(9, 9, 1), input_shape=(81,), name='Reshape'))
         out_model.add(Convolution2D(2, (3, 3), input_shape=(9, 9, 1), name='Convolution2D'))
         if use_dropout:

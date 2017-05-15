@@ -178,7 +178,7 @@ class Model(object):
         """
         path = os.path.expandvars(os.path.expanduser(path))
         with open(path, "wb") as f:
-            pickle.dump(self.roots, f)
+            pickle.dump(self.roots, f, protocol = 2) # make it python2 compatible always
 
 
 class TensorRegister(type):

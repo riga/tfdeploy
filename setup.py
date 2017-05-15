@@ -10,9 +10,14 @@ import tfdeploy as td
 readme = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md")
 if os.path.isfile(readme):
     cmd = "pandoc --from=markdown --to=rst " + readme
-    p = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True, executable="/bin/bash")
-    out, err = p.communicate()
-    if p.returncode != 0:
+    try:
+        p = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True, executable="/bin/bash")
+        out, err = p.communicate()
+        returncode = p.returncode
+    except FileNotFoundError as file_exp:
+        print('pandoc and/or bash not found')
+        out, err, returncode = -1,str(file_exp), -1
+    if returncode != 0:
         print("pandoc conversion failed: " + err)
     long_description = out
 else:

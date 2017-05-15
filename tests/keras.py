@@ -15,7 +15,7 @@ try:
 
     from keras.models import Sequential, Model, Input
     from keras.layers import Dense, Convolution2D, MaxPooling2D, UpSampling2D, BatchNormalization, Dropout, Reshape, \
-        Conv2DTranspose, LSTM, LeakyReLU, Activation, RepeatVector, Lambda
+        Conv2DTranspose, LSTM, LeakyReLU, Activation, RepeatVector, Lambda, LocallyConnected2D
     from keras.optimizers import Adam
     from keras.backend import tensorflow_backend as tfb
     import keras.backend as K
@@ -25,7 +25,8 @@ try:
 except ImportError:
     KERAS_MISSING = True
 
-UNSUPPORTED_LAYERS = ['Dropout', 'BatchNormalization', 'UpSampling2D', 'Convolution2DTranspose', 'LSTM', 'RepeatVector']
+UNSUPPORTED_LAYERS = ['Dropout', 'BatchNormalization', 'UpSampling2D', 'Convolution2DTranspose',
+                      'LSTM', 'RepeatVector', 'LocallyConnected2D']
 
 __all__ = ["KerasTestCase"]
 
@@ -57,8 +58,8 @@ class KerasTestCase(TestCase):
 
     def test_cnn_models(self):
         model_kwargs = dict(use_dense=False, use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
-                            use_conv2dtrans=False, use_lstm=False, use_leakyrelu=False, use_repeatvec = False,
-                            use_lambda = False)
+                            use_conv2dtrans=False, use_lstm=False, use_leakyrelu=False, use_repeatvec=False,
+                            use_lambda=False, use_locallyconnected=False)
 
         def _try_args(**kw_args):
             new_args = model_kwargs.copy()
@@ -158,7 +159,8 @@ class KerasTestCase(TestCase):
 
     @staticmethod
     def _build_simple_2d(use_dense=False, use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
-                         use_conv2dtrans=False, use_lstm=False, use_leakyrelu=False, use_repeatvec = False, use_lambda = False):
+                         use_conv2dtrans=False, use_lstm=False, use_leakyrelu=False, use_repeatvec=False,
+                         use_lambda=False, use_locallyconnected=False):
         """
         Simple function for building CNN models with various layers turned on and off
         :param use_dropout: 
@@ -174,12 +176,12 @@ class KerasTestCase(TestCase):
         if use_dense:
             out_model.add(Dense(81, input_shape=(81,), name='Dense'))
         if use_repeatvec:
-            out_model.add(RepeatVector(3, input_shape= (81,), name = 'RepeatVector'))
-            out_model.add(Lambda(lambda x: x[0,:], name = 'Lambda'))
+            out_model.add(RepeatVector(3, input_shape=(81,), name='RepeatVector'))
+            out_model.add(Lambda(lambda x: x[0, :], name='Lambda'))
         out_model.add(Reshape(target_shape=(9, 9, 1), input_shape=(81,), name='Reshape'))
         out_model.add(Convolution2D(2, (3, 3), input_shape=(9, 9, 1), name='Convolution2D'))
         if use_lambda:
-            out_model.add(Lambda(lambda x: x+1, name = 'Lambda_add'))
+            out_model.add(Lambda(lambda x: x + 1, name='Lambda_add'))
         if use_leakyrelu:
             out_model.add(LeakyReLU(0.1, name='LeakyRelu'))
         if use_dropout:
@@ -192,6 +194,8 @@ class KerasTestCase(TestCase):
             out_model.add(BatchNormalization(name='BatchNormalization'))
         if use_conv2dtrans:
             out_model.add(Conv2DTranspose(2, kernel_size=(3, 3), strides=(2, 2), name='Convolution2DTranspose'))
+        if use_locallyconnected:
+            out_model.add(LocallyConnected2D(3, (3, 3), name='LocallyConnected2D'))
 
         KerasTestCase.compile_model(out_model)
         return out_model

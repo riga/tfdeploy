@@ -14,8 +14,8 @@ from .base import TestCase, td
 try:
 
     from keras.models import Sequential, Model, Input
-    from keras.layers import Convolution2D, MaxPooling2D, UpSampling2D, BatchNormalization, Dropout, Reshape, \
-        Conv2DTranspose, LSTM, GRU
+    from keras.layers import Dense, Convolution2D, MaxPooling2D, UpSampling2D, BatchNormalization, Dropout, Reshape, \
+        Conv2DTranspose, LSTM, LeakyReLU, Activation
     from keras.optimizers import Adam
     from keras.backend import tensorflow_backend as tfb
     import keras.backend as K
@@ -37,9 +37,27 @@ class KerasTestCase(TestCase):
         td.setup(tf)
         K.set_image_dim_ordering('tf')
 
+    def test_deploy_tool(self):
+        c_model = KerasTestCase._build_simple_2d(use_leakyrelu=True, use_pooling=True)
+        t_model, in_mapping, out_mapping = td.deploy_keras(c_model)
+        print(in_mapping)
+        print(out_mapping)
+
+        self.assertIsInstance(t_model, td.Model, "Output should be tfdeploy model")
+        self.assertEqual(len(in_mapping), 1, "only one input")
+        self.assertIn('Reshape_input', in_mapping, "Reshape not found in input")
+        self.assertIn('MaxPooling2D', out_mapping, "MaxPooling not found in output")
+        self.assertEqual(len(out_mapping), 1, "only one ouput")
+        for c_mapping in [in_mapping, out_mapping]:
+            for keras_name, tf_name in c_mapping.items():
+                cur_tensor = t_model.get(tf_name)
+                self.assertIsNotNone(cur_tensor, "Layer: {} -> TF:{}, not found in model".format(
+                    keras_name, tf_name))
+                self.assertIsInstance(cur_tensor, td.Tensor, "Layer should be tensor: {}".format(cur_tensor))
+
     def test_cnn_models(self):
-        model_kwargs = dict(use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
-                            use_conv2dtrans=False, use_lstm=False)
+        model_kwargs = dict(use_dense=False, use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
+                            use_conv2dtrans=False, use_lstm=False, use_leakyrelu=False)
 
         def _try_args(**kw_args):
             new_args = model_kwargs.copy()
@@ -53,7 +71,6 @@ class KerasTestCase(TestCase):
 
         deployed_models = []
         for i, (model_name, cur_keras_model) in enumerate(test_models):
-
             model_layers = ','.join(map(lambda x: x.name, cur_keras_model.layers))
             out_path = "%04d.pkl" % i
             try:
@@ -139,8 +156,8 @@ class KerasTestCase(TestCase):
         i_model.compile(optimizer=Adam(lr=2e-3), loss='mse')
 
     @staticmethod
-    def _build_simple_2d(use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
-                         use_conv2dtrans=False, use_lstm=False):
+    def _build_simple_2d(use_dense=False, use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
+                         use_conv2dtrans=False, use_lstm=False, use_leakyrelu=False):
         """
         Simple function for building CNN models with various layers turned on and off
         :param use_dropout: 
@@ -153,8 +170,12 @@ class KerasTestCase(TestCase):
         if use_lstm:
             out_model.add(Reshape(target_shape=(1, 81), input_shape=(81,), name='Reshape_LSTM'))
             out_model.add(LSTM(81, name='LSTM'))
+        if use_dense:
+            out_model.add(Dense(81, input_shape=(81,), name='Dense'))
         out_model.add(Reshape(target_shape=(9, 9, 1), input_shape=(81,), name='Reshape'))
         out_model.add(Convolution2D(2, (3, 3), input_shape=(9, 9, 1), name='Convolution2D'))
+        if use_leakyrelu:
+            out_model.add(LeakyReLU(0.1, name='LeakyRelu'))
         if use_dropout:
             out_model.add(Dropout(0.5, name='Dropout'))
         if use_pooling:

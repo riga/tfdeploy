@@ -37,10 +37,22 @@ class KerasTestCase(TestCase):
         td.setup(tf)
         K.set_image_dim_ordering('tf')
 
-    def test_combined_models(self):
-        test_models = [KerasTestCase._build_simple_2d(*iv) for iv in product(*([[True, False]] * 6))]
+    def test_cnn_models(self):
+        model_kwargs = dict(use_dropout=False, use_pooling=False, use_bn=False, use_upsample=False,
+                            use_conv2dtrans=False, use_lstm=False)
+
+        def _try_args(**kw_args):
+            new_args = model_kwargs.copy()
+            new_args.update(kw_args)
+            return new_args
+
+        test_models = [('base_cnn', KerasTestCase._build_simple_2d())]
+        test_models += [(c_arg,
+                         KerasTestCase._build_simple_2d(**_try_args(**{c_arg: True})))
+                        for c_arg in model_kwargs.keys()]
+
         deployed_models = []
-        for i, cur_keras_model in enumerate(test_models):
+        for i, (model_name, cur_keras_model) in enumerate(test_models):
 
             model_layers = ','.join(map(lambda x: x.name, cur_keras_model.layers))
             out_path = "%04d.pkl" % i
@@ -48,7 +60,7 @@ class KerasTestCase(TestCase):
                 deployed_models += \
                     KerasTestCase.export_keras_model(cur_keras_model, out_path, model_name=model_layers)
             except td.UnknownOperationException as uoe:
-                print('Model {}: {}'.format(i, model_layers), 'could not be serialized', uoe)
+                print('Model {}: {}'.format(i, model_name), 'could not be serialized', uoe)
                 bad_layer_count = sum([us_layer in model_layers for us_layer in UNSUPPORTED_LAYERS])
                 self.assertGreater(bad_layer_count, 0,
                                    "Model contains no unsupported layers {}, "
@@ -69,10 +81,10 @@ class KerasTestCase(TestCase):
         :return: 
         """
         kapp_kwargs = dict(
-            input_shape = (99, 99, 3),
-            weights = None,
-            include_top = False # so we can use different sizes
-                           )
+            input_shape=(99, 99, 3),
+            weights=None,
+            include_top=False  # so we can use different sizes
+        )
         test_models = []
 
         test_models += [('Resnet50', kapps.ResNet50(**kapp_kwargs))]

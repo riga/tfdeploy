@@ -223,7 +223,7 @@ def deploy_keras(in_keras_model):
     try:
         from keras.backend import tensorflow_backend as tfb
     except ImportError:
-        raise NotImplementedError("Keras is installed or not setup with the tensorflow backend!")
+        raise NotImplementedError("Keras is not installed or not setup with the tensorflow backend!")
 
     td_model = Model()
     keras_in_mapping = OrderedDict()

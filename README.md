@@ -115,6 +115,26 @@ batch = np.random.rand(10000, 784)
 result = y.eval({x: batch})
 ```
 
+##### Convert a Keras Model
+
+You can also convert Keras models (although many layers are still not supported, see test output for the keras.py test suite)
+
+```python
+>>> import tfdeploy as td
+>>> from keras.models import Sequential, Model
+>>> from keras.layers import Convolution2D
+>>> k_model = Sequential()
+>>> k_model.add(Convolution2D(5, (3,3), input_shape = (9,9,1)))
+>>> k_model.compile('sgd', 'mse')
+>>> t_model, i_names, o_names = td.deploy_keras(k_model)
+>>> type(t_model)
+<class 'tfdeploy.Model'>
+>>> i_names
+OrderedDict([('conv2d_1_input', 'conv2d_1_input:0')])
+>>> o_names
+OrderedDict([('conv2d_1', 'conv2d_1/BiasAdd:0')])
+```
+
 ##### Write your own `Operation`
 
 tfdeploy supports most of the `Operation`'s [implemented in tensorflow](https://www.tensorflow.org/versions/master/api_docs/python/math_ops.html). However, if you miss one (in that case, submit a PR or an issue ;) ) or if you're using custom ops, you might want to extend tfdeploy by defining a new class op that inherits from `tfdeploy.Operation`:

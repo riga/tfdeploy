@@ -7,12 +7,12 @@ numpy.
 
 
 __author__     = "Marcel Rieger"
-__copyright__  = "Copyright 2016-2017, Marcel Rieger"
+__copyright__  = "Copyright 2016-2021, Marcel Rieger"
 __credits__    = ["Marcel Rieger"]
 __contact__    = "https://github.com/riga/tfdeploy"
 __license__    = "MIT"
 __status__     = "Development"
-__version__    = "0.4.0"
+__version__    = "0.4.2"
 
 __all__ = ["Model", "Tensor", "Operation", "Ensemble",
            "UnknownOperationException", "OperationMismatchException",
@@ -514,7 +514,7 @@ class Operation(object):
 
             cls = Operation.__class__(func.__name__, (Operation,), classdict)
             cls.__doc__ = func.__doc__
-            cls.impls.append(impl) 
+            cls.impls.append(impl)
             cls.use_impl(impl)
 
             return cls

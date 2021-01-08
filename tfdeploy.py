@@ -10,7 +10,7 @@ __author__     = "Marcel Rieger"
 __copyright__  = "Copyright 2016-2021, Marcel Rieger"
 __credits__    = ["Marcel Rieger"]
 __contact__    = "https://github.com/riga/tfdeploy"
-__license__    = "MIT"
+__license__    = "BSD-3-Clause"
 __status__     = "Development"
 __version__    = "0.4.2"
 

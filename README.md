@@ -9,7 +9,7 @@ Deploy [tensorflow](https://www.tensorflow.org) graphs for *fast* evaluation and
 > Up to a certain version, the NumPy based operations in tfdeploy provided full feature parity, but it is obvious that such a project cannot keep up with the vast development speed driven by TensorFlow devs and the open-source community.
 >
 > Therefore, tfdeploy is **no longer actively maintained**.
-> However, the code base remains active as a easy-to-read reference implementation for most of the kernels that constitute the heart of todays ML landscape.
+> However, the code base remains active as an easy-to-read reference implementation for most of the kernels that constitute the heart of todays ML landscape.
 
 
 ##### Evaluation usage

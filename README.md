@@ -2,9 +2,14 @@
 
 [![Build Status](https://travis-ci.org/riga/tfdeploy.svg?branch=master)](https://travis-ci.org/riga/tfdeploy) [![Documentation Status](https://readthedocs.org/projects/tfdeploy/badge/?version=latest)](http://tfdeploy.readthedocs.org/en/latest/?badge=latest) [![Package Status](https://badge.fury.io/py/tfdeploy.svg)](https://badge.fury.io/py/tfdeploy)
 
-Deploy [tensorflow](https://www.tensorflow.org) graphs for *fast* evaluation and export to *tensorflow-less* environments running [numpy](http://www.numpy.org).
+Deploy [tensorflow](https://www.tensorflow.org) graphs for *fast* evaluation and export to *tensorflow-less* environments running [NumPy](http://www.numpy.org).
 
-**Now with tensorflow 1.0 support.**
+> [!NOTE]  
+> This project started as a personal playground to get an in-depth understanding of TensorFlow's operations and kernels.
+> Up to a certain version, the NumPy based operations in tfdeploy provided full feature parity, but it is obvious that such a project cannot keep up with the vast development speed driven by TensorFlow devs and the open-source community.
+>
+> Therefore, tfdeploy is **no longer actively maintained**.
+> However, the code base remains active as a easy-to-read reference implementation for most of the kernels that constitute the heart of todays ML landscape.
 
 
 ##### Evaluation usage
@@ -31,9 +36,9 @@ pip install tfdeploy
 
 or by simply copying the file into your project.
 
-Numpy ≥ 1.10 should be installed on your system. [Scipy](http://www.scipy.org/) is optional. See [optimization](#optimization) for more info on optional packages.
+NumPy ≥ 1.10 should be installed on your system. [SciPy](http://www.scipy.org/) is optional. See [optimization](#optimization) for more info on optional packages.
 
-By design, tensorflow is required when creating a model. All versions ≥ 1.0.1 are supported.
+By design, TensorFlow is required when creating a model.
 
 
 ### Content
@@ -53,23 +58,23 @@ By design, tensorflow is required when creating a model. All versions ≥ 1.0.1 
 
 ## Why?
 
-Working with tensorflow is awesome. Model definition and training is simple yet powerful, and the range of built-in features is just striking.
+Working with TensorFlow is awesome. Model definition and training is simple yet powerful, and the range of built-in features is just striking.
 
-However, when it comes down to model deployment and evaluation, things get a bit more cumbersome than they should be. You either export your graph to a new file *and* [save your trained variables](https://www.tensorflow.org/versions/master/how_tos/variables/index.html#saving-variables) in a separate file, or you make use of tensorflow's [serving system](https://www.tensorflow.org/versions/master/tutorials/tfserve/index.html). Wouldn't it be great if you could just export your model to a simple numpy-based callable? Of course it would. And this is exactly what tfdeploy does for you.
+Model deployment in environments that are not able to run TensorFlow, however, things can be difficult (**note** that tfdeploy was developed before TensorFlow Lite was a thing).
 
 To boil it down, tfdeploy
 
 - is lightweight. A single file with < 150 lines of core code. Just copy it to your project.
-- [faster](#performance) than using tensorflow's `Tensor.eval`.
-- **does not need tensorflow** during evaluation.
-- only depends on numpy.
+- [faster](#performance) than using TensorFlow's `Tensor.eval`.
+- **does not need TensorFlow** during evaluation.
+- only depends on NumPy.
 - can load one or more models from a single file.
 - does not support GPUs (maybe [gnumpy](http://www.cs.toronto.edu/~tijmen/gnumpy.html) is worth a try here).
 
 
 ## How?
 
-The central class is `tfdeploy.Model`. The following two examples demonstrate how a model can be created from a tensorflow graph, saved to and loaded from disk, and eventually evaluated.
+The central class is `tfdeploy.Model`. The following two examples demonstrate how a model can be created from a TensorFlow graph, saved to and loaded from disk, and eventually evaluated.
 
 ##### Convert your graph
 
@@ -153,7 +158,7 @@ model.save("model.pkl")
 
 When writing new ops, three things are important:
 
-- Try to avoid loops, prefer numpy vectorization.
+- Try to avoid loops, prefer NumPy vectorization.
 - Return a tuple.
 - Don't change incoming tensors/arrays in-place, always work on and return copies.
 
@@ -183,13 +188,13 @@ You can choose between `METHOD_MEAN` (the default), `METHOD_MAX` and `METHOD_MIN
 
 Most ops are written using pure numpy. However, multiple implementations of the same op are allowed that may use additional third-party Python packages providing even faster functionality for some situations.
 
-For example, numpy does not provide a vectorized *lgamma* function. Thus, the standard `tfdeploy.Lgamma` op uses `math.lgamma` that was previously vectorized using `numpy.vectorize`. For these situations, additional implementations of the same op are possible (the *lgamma* example is quite academic, but this definitely makes sense for more sophisticated ops like pooling). We can simply tell the op to use its scipy implementation instead:
+For example, NumPy does not provide a vectorized *lgamma* function. Thus, the standard `tfdeploy.Lgamma` op uses `math.lgamma` that was previously vectorized using `numpy.vectorize`. For these situations, additional implementations of the same op are possible (the *lgamma* example is quite academic, but this definitely makes sense for more sophisticated ops like pooling). We can simply tell the op to use its SciPy implementation instead:
 
 ```python
 td.Lgamma.use_impl(td.IMPL_SCIPY)
 ```
 
-Currently, allowed implementation types are numpy (`IMPL_NUMPY`, the default) and scipy (`IMPL_SCIPY`).
+Currently, allowed implementation types are NumPy (`IMPL_NUMPY`, the default) and SciPy (`IMPL_SCIPY`).
 
 
 ##### Adding additional implementations
@@ -215,18 +220,18 @@ def Lgamma(a):
 
 ##### Auto-optimization
 
-If scipy is available on your system, it is reasonable to use all ops in their scipy implementation (if it exists, of course). This should be configured before you create any model from tensorflow objects using the second argument of the `setup` function:
+If SciPy is available on your system, it is reasonable to use all ops in their SciPy implementation (if it exists, of course). This should be configured before you create any model from TensorFlow objects using the second argument of the `setup` function:
 
 ```python
 td.setup(tf, td.IMPL_SCIPY)
 ```
 
-Ops that do not implement `IMPL_SCIPY` stick with the numpy version (`IMPL_NUMPY`).
+Ops that do not implement `IMPL_SCIPY` stick with the NumPy version (`IMPL_NUMPY`).
 
 
 ## Performance
 
-tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal evaluation calls have only very few overhead and tensor operations use numpy vectorization. The actual performance depends on the ops in your graph. While most of the tensorflow ops have a numpy equivalent or can be constructed from numpy functions, a few ops require additional Python-based loops (e.g. `BatchMatMul`). But in many cases it's potentially faster than using tensorflow's `Tensor.eval`.
+tfdeploy is lightweight (1 file, < 150 lines of core code) and fast. Internal evaluation calls have only very few overhead and tensor operations use NumPy vectorization. The actual performance depends on the ops in your graph. While most of the TensorFlow ops have a numpy equivalent or can be constructed from NumPy functions, a few ops require additional Python-based loops (e.g. `BatchMatMul`). But in many cases (and for small to medium graphs) it's potentially faster than using TensorFlow's `Tensor.eval`.
 
 This is a comparison for a basic graph where all ops are vectorized (basically `Add`, `MatMul` and `Softmax`):
 

@@ -19,6 +19,7 @@ __all__ = ["Model", "Tensor", "Operation", "Ensemble",
            "InvalidImplementationException", "UnknownImplementationException",
            "EnsembleMismatchException", "ScipyOperationException",
            "reset", "optimize", "print_tensor", "print_op", "print_tf_tensor", "print_tf_op",
+           "deploy_keras",
            "IMPL_NUMPY", "IMPL_SCIPY", "IMPLS",
            "METHOD_MEAN", "METHOD_MAX", "METHOD_MIN", "METHOD_CUSTOM", "METHODS",
            "HAS_SCIPY"]
@@ -29,6 +30,7 @@ import os
 import re
 from uuid import uuid4
 from functools import reduce
+from collections import OrderedDict
 
 try:
     # python 2
@@ -55,7 +57,6 @@ def add_metaclass(metaclass):
         orig_vars.pop("__weakref__", None)
         return metaclass(cls.__name__, cls.__bases__, orig_vars)
     return wrapper
-
 
 class Model(object):
     """
@@ -177,7 +178,7 @@ class Model(object):
         """
         path = os.path.expandvars(os.path.expanduser(path))
         with open(path, "wb") as f:
-            pickle.dump(self.roots, f)
+            pickle.dump(self.roots, f, protocol = 2) # make it python2 compatible always
 
 
 class TensorRegister(type):
@@ -195,6 +196,47 @@ class TensorRegister(type):
             cls.instances[tf_tensor] = inst
         return cls.instances[tf_tensor]
 
+
+def deploy_keras(in_keras_model):
+    # type: (keras.models.Model) -> Tuple[Model, Dict[str, str], Dict[str, str]]
+    """
+    Converts a keras model (>2.0) to a tfdeploy model and provides a list of input and output
+    mappings from keras layer names to tensorflow tensor names
+    :param in_keras_model: the keras model to convert
+    :return: the tfdeploy model, a dictionary mapping inputs and a dictionary mapping outputs 
+    The dictionaries map keras layer names to tensorflow names
+    Usage
+    ====
+    >>> from keras.models import Sequential, Model
+    >>> from keras.layers import Convolution2D
+    >>> k_model = Sequential()
+    >>> k_model.add(Convolution2D(5, (3,3), input_shape = (9,9,1)))
+    >>> k_model.compile('sgd', 'mse')
+    >>> t_model, i_names, o_names = deploy_keras(k_model)
+    >>> type(t_model)
+    <class 'tfdeploy.Model'>
+    >>> i_names
+    OrderedDict([('conv2d_1_input', 'conv2d_1_input:0')])
+    >>> o_names
+    OrderedDict([('conv2d_1', 'conv2d_1/BiasAdd:0')])
+    """
+    try:
+        from keras.backend import tensorflow_backend as tfb
+    except ImportError:
+        raise NotImplementedError("Keras is not installed or not setup with the tensorflow backend!")
+
+    td_model = Model()
+    keras_in_mapping = OrderedDict()
+    for i, in_name in enumerate(in_keras_model.input_names):
+        keras_in_mapping[in_name] = in_keras_model.get_input_at(i).name
+
+    keras_out_mapping = OrderedDict()
+    for i, out_name in enumerate(in_keras_model.output_names):
+        keras_out_mapping[out_name] = in_keras_model.get_output_at(i).name
+        td_model.add(in_keras_model.get_output_at(i),
+                 tfb.get_session())  # y and all its ops and related tensors are added recursively
+
+    return td_model, keras_in_mapping, keras_out_mapping
 
 @add_metaclass(TensorRegister)
 class Tensor(object):

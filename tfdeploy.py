@@ -7,7 +7,7 @@ numpy.
 
 
 __author__     = "Marcel Rieger"
-__copyright__  = "Copyright 2016-2024, Marcel Rieger"
+__copyright__  = "Copyright 2016-2025, Marcel Rieger"
 __credits__    = ["Marcel Rieger"]
 __contact__    = "https://github.com/riga/tfdeploy"
 __license__    = "BSD-3-Clause"
